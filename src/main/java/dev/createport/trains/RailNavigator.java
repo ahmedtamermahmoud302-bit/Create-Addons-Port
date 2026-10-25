@@ -20,9 +20,9 @@ public final class RailNavigator {
     }
     private static Point worldPoint(Cell cell,Point point) { return point.add(cell.x,cell.y,cell.z); }
     public static Advance advance(Cursor cursor,double distance,Lookup tracks) {
-        if (!Double.isFinite(distance) || Math.abs(distance)>16) throw new IllegalArgumentException("Invalid travel distance");
+        if (!Double.isFinite(distance) || Math.abs(distance)>64) throw new IllegalArgumentException("Invalid travel distance");
         double remaining=Math.abs(distance),moved=0; int sign=distance<0 ? -1:1;
-        for (int transitions=0;transitions<64;transitions++) {
+        for (int transitions=0;transitions<128;transitions++) {
             Shape shape=tracks.get(cursor.cell());
             if (shape==null) return new Advance(cursor,true,sign*moved);
             RailPath path=RailPath.of(shape); int travel=cursor.forward()*sign;

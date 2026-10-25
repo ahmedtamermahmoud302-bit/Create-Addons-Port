@@ -20,12 +20,12 @@ public final class TrainStructure {
     }
     public static List<Part> read(NBTTagCompound data) {
         List<Part> result=new ArrayList<>();NBTTagList list=data.getTagList("Blocks",10);
-        for(int i=0;i<Math.min(64,list.tagCount());i++) {
+        for(int i=0;i<Math.min(256,list.tagCount());i++) {
             NBTTagCompound n=list.getCompoundTagAt(i);int x=n.getInteger("X"),y=n.getInteger("Y"),z=n.getInteger("Z");
             Block block=Block.getBlockFromName(n.getString("Block"));
-            if(block==null || block==Blocks.AIR || Math.abs(x)>4 || y<0 || y>4 || Math.abs(z)>6)continue;
+            if(block==null || block==Blocks.AIR || Math.abs(x)>8 || y<0 || y>12 || Math.abs(z)>24)continue;
             IBlockState state=block.getStateFromMeta(Math.floorMod(n.getInteger("Meta"),16));
-            if(state.getMaterial().isSolid() && !block.hasTileEntity(state))result.add(new Part(x,y,z,state));
+            if(state.getMaterial().isSolid() && (!block.hasTileEntity(state) || block==dev.createport.Create.SMALL_BOGEY))result.add(new Part(x,y,z,state));
         }
         return List.copyOf(result);
     }

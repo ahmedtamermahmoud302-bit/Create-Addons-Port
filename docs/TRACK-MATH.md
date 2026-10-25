@@ -1,39 +1,35 @@
-# Straight track, turns and slopes
+# Track geometry
 
-## Building in this alpha
+Reference: Create 6.0.8 `TrackPlacement`, `BezierConnection.Runtime`, `SegmentAngles` and `TrackRenderer.getModelAngles`.
 
-Place Railway Track on solid blocks. Pieces next to each other align automatically into a straight run. Connect a run at a right angle to form a corner. Raise the next supported piece by one block for a slope. The current placement adapter uses Minecraft's block rail shapes; it does not yet have Create's two-endpoint placement tool or long multi-block Bezier connections.
+## Straight and diagonal track
 
-## The implemented paths
+Each ordinary track block has a path between its two boundary endpoints. Horizontal north–south/east–west paths have length 1; flat diagonal paths have length √2. The server advances its cursor by distance, then transfers the remainder to a matching endpoint. A missing connection stops the carriage. Legacy 0.2.0 tight block corners remain available for save compatibility; new turns use multi-block Bezier connections.
 
-A straight section interpolates between endpoints A and B:
+## Placement
 
-`P(t) = A + t (B − A)`, with `0 ≤ t ≤ 1`.
+For a flat connection, the selected axes are oriented toward each other. The tool intersects their horizontal lines to distinguish a turn from a straight line or S bend.
 
-A slope uses the same equation with different endpoint heights. Its physical length is `sqrt(dx² + dy² + dz²)`.
+For turns, the source's minimum intersection distances are 7 for 90-degree turns and 3.25 for other allowed turns, with additional clearance for elevation. Extra distance becomes straight extensions on both ends, rounded down to block counts. Sprint keeps the largest available curve. Level S bends need a forward distance of at least twice their lateral offset (or 3 when the offset is at most 1); excess distance is split between the two straight extensions. Collinear level connections fill ordinary track rather than storing a curve.
 
-The initial right-angle block corner is a quarter circle:
+Preview and placement share `TrackPlacement.Plan`. Placement validates permissions, loaded chunks, obstructions and survival inventory before changing the world. Curve specifications are saved in per-dimension `create_tracks` data; both endpoint tiles synchronize them for rendering.
 
-`x(t) = cx + r cos(θ0 + Δθ t)`
+## Cubic curves
 
-`z(t) = cz + r sin(θ0 + Δθ t)`
+With endpoints A/B and outward unit axes U/V, control points are C₁ = A + hU and C₂ = B + hV:
 
-Here `r = 0.5` blocks and `Δθ = ±π/2`. Its length is `r × |Δθ|`. These are tight block corners, not the large-radius turns in modern Create.
+`P(t) = (1−t)³A + 3(1−t)²tC₁ + 3(1−t)t²C₂ + t³B`.
 
-`RailPath.java` supplies position, normalized tangent and length. `RailNavigator.java` spends a requested travel distance along the current section, carries any remainder into its connected neighbour, and preserves the carriage's forward orientation when reversing. Missing or disconnected neighbours stop it at the endpoint. A higher endpoint searches neighbouring track one block above so slopes join correctly.
+Create's circular handle rule is `h = r × 4/3 × tan(θ/4)`, where r comes from intersecting the perpendicular endpoint axes and θ is the angle between U and −V. For a quarter circle, `h/r ≈ 0.55228475`. Parallel-axis S bends use the source's special handle rule; the fallback is endpoint distance / 3.
 
-Heading follows the track tangent: `yaw = atan2(−dx, dz)`. Wheel rotation follows distance: `Δangle = −360 × distance / (2π × wheelRadius)`. The small bogey uses the reference radius `6.5/16` blocks.
+The source estimates length with 16 samples, chooses `floor(length × 2)` render segments, and constructs its step lookup table. The port uses these rules for visual segmentation. It adds a separate 512-sample distance table for server movement; it does not use render segment number as train speed.
 
-## Create-style long smooth turns
+Rails are offset from the centerline by ±0.965 along the track normal. Original rail and tie OBJ parts receive the source's translations, yaw/pitch/roll, 2.1 overlap scaling and 2.2 end scaling. The item icon and item model are original assets, not a miniature world-track mesh.
 
-A full placement tool connects two selected endpoints and their direction tangents using a cubic Bezier curve:
+## Carriage orientation
 
-`B(t) = (1−t)³ A + 3(1−t)²t C1 + 3(1−t)t² C2 + t³ B`
+For a two-bogey carriage, the body follows the chord between bogey positions. A bounded search finds the forward rail distance whose chord equals the built bogey spacing. Each bogey renders with its own tangent relative to the body. At the end of the available route the carriage stops before its leading bogey loses support.
 
-`C1 = A + h1 × startTangent`
+## Remaining differences
 
-`C2 = B − h2 × endTangent`
-
-The handles h1 and h2 control curvature while the tangents make the curve meet the straight pieces smoothly. For even train speed, a graph edge needs an arc-length table: sample the curve, accumulate travelled distance, then invert that table to find t for each requested distance. Advancing by a constant t would make speed vary through the turn.
-
-Those multi-block Bezier edges, their placement tool, junction choices and two-bogey carriage alignment remain porting work. They are not included merely because this alpha has a working single-block curve adapter.
+Full track graphs/junction routing, tilted endpoints, slope-transition placement, banking, girders, offhand paving and the complete upstream placement UI are not ported. The old engine's lighting and rendering have not been proven pixel-identical to 1.20.1.

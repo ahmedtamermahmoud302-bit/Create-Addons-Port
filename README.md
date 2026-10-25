@@ -1,6 +1,8 @@
 # Create — Cleanroom 1.12.2 port
 
-Work in progress. One `create` mod/artifact is the packaging target, with add-on features grouped internally under their original names. This checkout implements an initial kinetic foundation and a first driveable train carriage with Super Glue body assembly. It is not a complete or exact port of Create or its add-ons. See [train controls and limitations](docs/TRAINS.md).
+Work in progress. One `create` mod/artifact is the packaging target, with add-on features grouped internally under their original names. This checkout implements an initial kinetic foundation, Wrench and Engineer's Goggles, Bezier track placement, and world-built trains assembled/disassembled at a Train Station. It is not a complete or exact port of Create or its add-ons. See [train controls and limitations](docs/TRAINS.md).
+
+Latest build: [create-0.3.0-alpha.jar](create-0.3.0-alpha.jar). See [0.3.0 validation](docs/VALIDATION-0.3.md). Replace the older Create port JAR in `mods`; keep only one version installed.
 
 Reference: Create **6.0.8 for Minecraft 1.20.1**, upstream tag `mc1.20.1-6.0.8` / commit `1a1a9a2819b4f89f78caec41b55ed8cb222fa24b`. See [parity tracking](docs/PARITY.md) and the [38 uploaded reference artifacts](docs/REFERENCES.md).
 
@@ -44,7 +46,7 @@ python scripts/smoke-server.py --stop
 
 ## Trains and Super Glue
 
-Use `create:track`, `create:train_carriage` and `create:super_glue` from Creative inventory. [The train guide](docs/TRAINS.md) explains driving, glue and the supported solid-block body assembly. [Track maths](docs/TRACK-MATH.md) explains straight lines, corners and slopes, and distinguishes the current block-track adapter from unported long Bezier curves.
+Use Railway Track, Train Station, Train Casing, Train Controls and Super Glue from Creative inventory. [The train guide](docs/TRAINS.md) explains how to build, assemble, drive and disassemble a carriage. [Track maths](docs/TRACK-MATH.md) explains straight extensions and Bezier turns. [Equipment](docs/EQUIPMENT.md) covers the Wrench and Engineer's Goggles.
 
 ## Initial kinetic content
 

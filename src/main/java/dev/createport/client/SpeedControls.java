@@ -1,6 +1,7 @@
 package dev.createport.client;
 
 import dev.createport.Create;
+import dev.createport.equipment.*;
 import dev.createport.kinetics.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
@@ -23,7 +24,7 @@ public final class SpeedControls {
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getMinecraft(); KineticTile tile = target();
-        if (tile == null || mc.currentScreen != null || mc.player.isSneaking() || mc.player.isSpectator()
+        if (tile == null || WrenchItem.isHolding(mc.player) || mc.currentScreen != null || mc.player.isSneaking() || mc.player.isSpectator()
                 || !mc.player.capabilities.allowEdit || !mc.gameSettings.keyBindUseItem.isKeyDown()
                 || mc.objectMouseOver.sideHit.getAxis() == tile.axis()
                 || (tile.axis() != net.minecraft.util.EnumFacing.Axis.Y && mc.objectMouseOver.sideHit == net.minecraft.util.EnumFacing.DOWN)) { heldTicks=0; return; }
@@ -31,7 +32,7 @@ public final class SpeedControls {
     }
     @SubscribeEvent public static void overlay(RenderGameOverlayEvent.Post event) {
         if (event.getType() != RenderGameOverlayEvent.ElementType.ALL) return;
-        KineticTile tile = target(); if (tile == null) return;
+        KineticTile tile = target(); if (tile == null || GogglesItem.isWearing(Minecraft.getMinecraft().player) || WrenchItem.isHolding(Minecraft.getMinecraft().player)) return;
         Minecraft mc = Minecraft.getMinecraft(); int x = event.getResolution().getScaledWidth() / 2 + 12;
         int y = event.getResolution().getScaledHeight() / 2 + 12;
         Gui.drawRect(x - 4, y - 4, x + 180, y + 39, 0xb0202020);

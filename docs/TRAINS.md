@@ -1,43 +1,39 @@
-# Trains in 0.2.0-alpha
+# Train construction (0.3.0 alpha)
 
-This build adds a first driveable train carriage to Minecraft 1.12.2 on Cleanroom 0.7.4-alpha and Java 25. It is a native entity with its own distance-based track movement, not a renamed minecart. It does not yet reproduce Create's full train system.
+Target: Create 6.0.8, adapted to Minecraft 1.12.2 / Cleanroom. Use the Creative inventory for the currently available content. This is a working assembly slice, not the full upstream train system.
 
-## Try it
+## Build a train in the world
 
-1. In Creative mode, open Transportation and get **Railway Track** and **Train Carriage**. Or use `/give @p create:track 64` and `/give @p create:train_carriage`.
-2. Lay track on solid support. Adjacent pieces connect into straight lines, corners and slopes. Leave room for the wide bogey and platform beside and above the track.
-3. Use the Train Carriage item on a track to place a carriage, then right-click the carriage to ride it.
-4. Use the Forward and Back keys (normally W/S) to accelerate or reverse. Reversing first brakes through zero. Release the throttle to coast; hold Jump (normally Space) to brake. Sneak (normally Shift) dismounts.
-5. Left-click the carriage to remove it. Outside Creative it returns the carriage item.
+1. Place a straight run of Railway Track (`create:track`). Tracks face the direction you look, including 45-degree diagonals. Assembly requires horizontal north–south or east–west track.
+2. Use the Train Station item on that straight track to select it. Place the station beside the line, within 16 blocks of the selected track.
+3. Open the station and choose **Begin Assembly Mode**.
+4. Use **Train Casing** on the track to place a bogey. Place one or two bogeys for this carriage, at least three blocks apart. Both must be on the selected straight line, within 24 blocks of the station's selected track.
+5. Build the body above the bogeys using Train Casing or ordinary solid blocks. The block directly above each bogey attaches automatically. Connect the rest using Super Glue.
+6. Add **Train Controls** to the glued body. Face them along the track; use the Wrench on their top to rotate them.
+7. Return to the station and choose **Assemble Train**. The server validates the entire selection first, captures block states and glue bonds, removes the source blocks, and creates a persistent moving carriage. No prefab wooden deck is added.
+8. Right-click the actual controls on the assembled carriage to drive. **Forward/Back** throttle, **Jump** brakes, and **Sneak** dismounts. Control orientation determines the forward direction. The carriage brakes when driver input stops arriving.
+9. Stop on straight track near the original station, dismount, open the station, and choose **Disassemble Train**. The carriage returns to world blocks and its internal glue bonds are restored. Occupied or protected destinations refuse disassembly and retain the train.
 
-The speed display appears while riding. The server accepts control packets only from that carriage's driver. Losing driver input triggers braking. Carriages stop at disconnected tracks, at solid obstructions and before another carriage; they do not use Create's collision or derailment system yet.
+Punching an assembled carriage does not delete it or drop a train item. Use the station to disassemble it. The old `train_carriage` item ID remains for existing saves, but is hidden and no longer spawns trains.
 
-## Included
+## Super Glue
 
-- Straight, curved and sloping block tracks.
-- A predefined bogey/platform carriage using the supplied original Create frame, wheel and axle meshes and textures. Wheels rotate from distance travelled using Create's small-bogey wheel radius of 6.5/16 blocks.
-- Acceleration, reversing, coasting and braking with server-owned movement and client position interpolation.
-- Track position, direction, speed and wheel rotation saved with the entity.
-- One bounded 3×3 Forge chunk ticket around each carriage so unattended trains can continue ticking, subject to the world's Forge chunk-loading limits.
+The current glue adapter uses two adjacent-block clicks: select one block, then its face-adjacent neighbor. Repeat to join the body. It saves bonds per dimension. Select one block and Sneak-use its neighbor to remove that joint. Sneak-use also clears a pending selection. Survival glue has 99 uses.
 
-Tracks and carriage items currently come from Creative inventory or commands; survival crafting and Create station assembly are not implemented.
+This input is still different from Create's modern selection-volume interface. The original item model and texture are included.
 
-## Differences still to port
+## Track placement
 
-The block-track adapter uses tight single-block arcs and vanilla-style rail placement. Create's multi-block Bezier curves, junction steering, track graph and track placement tools are not ported. The base platform is predefined and can carry a limited glued solid-block body as described below. Full contraption capture, connected carriages, stations/assembly GUI, coupling, schedules, signals, cargo, portals and Steam 'n' Rails/add-on integration remain unported. Models are adapted to the 1.12 renderer; exact visual parity is not claimed.
+Use an existing track with the Track item to select an endpoint, then use another track or a block surface for the other endpoint. The preview and server share the flat-track placement plan. Endpoint orientation is corrected toward the connection. Straight connections fill ordinary track blocks. Turns and S bends include straight extensions, with Create's minimum-size checks and standardization; hold Sprint to maximize the curve. Sneak-use clears the selection.
 
-## Developer checks
+Curves use original Create rail/tie OBJ geometry, gauge, segment overlap and Bezier handle/spacing rules. The held/inventory Track model JSON and icon are copied from the supplied 6.0.8 JAR. This does not certify pixel-identical rendering on the older engine. See [track maths](TRACK-MATH.md).
 
-`gradle --no-daemon build` runs kinetic, track/path, driving and original OBJ mesh tests.
+## Current scope
 
-With the prepared local development server running, `python scripts/smoke-trains.py` reserves x=6..20, y=7..11, z=6..22 and builds a test loop plus an end-of-track fixture. It tests native registration, travel around the loop, acceleration, coasting, reversing and stopping, and saves the stopped train. After restarting the server, `python scripts/smoke-trains.py --verify-persistence` checks the saved track cursor, speed and control state. It reads the ignored loopback RCON configuration without logging its password.
-
-## Super Glue and a custom solid-block body
-
-Get **Super Glue** from Creative Tools or `/give @p create:super_glue`. Use it on one block, then an adjacent block, to save a bond between their shared faces. Repeat to connect the body. To remove a bond, select one block normally, then Sneak-use its neighbour. Sneak-use without a selection clears the selection. The glue has the reference 99-use durability outside Creative.
-
-For this first assembly path, build the body above a **straight** track with its first block directly above the track where you will use the Train Carriage item. Glue its ordinary solid blocks together, then use the Train Carriage item on that track. A connected body of up to 64 blocks moves into the carriage. The supported body envelope is 9 blocks wide, 13 long and 5 high above the selected track; leave clearance around it. Tile entities, inventories, unbreakable blocks and non-solid decorations are refused before transfer. There is no station GUI or full contraption capture yet.
-
-The attached body moves and saves with the carriage. The initial rider sits above the body. Breaking a carriage outside Creative returns its carriage item and captured block items; station-based disassembly and proper seat/control blocks are future work. Bond data is saved per world dimension; player-broken blocks lose their bonds.
-
-See [track construction and maths](TRACK-MATH.md) for straight lines, right-angle corners, slopes, and the remaining work for long Create-style Bezier curves.
+- One carriage per station, one or two small bogeys, up to 256 solid block states in a 17 × 49 × 13 envelope. Bogeys and native controls are supported; inventories and machine tile entities are refused before capture.
+- Two-bogey heading uses both rail positions; bogeys swivel separately through curves. Distance-based movement, forward/reverse, braking, save/reload and bounded chunk loading are implemented.
+- Each carried block has its own placement/collision check. Client picking uses individual carried blocks so empty carriage space does not intercept station clicks. Collision between separate trains remains conservative.
+- Existing 0.2.0 trains and block-corner track metadata remain readable.
+- Coupled carriages, seats, schedules, signals, junction switching, train inventory/machine actors, derailment and full upstream contraption physics are not implemented. Walking on a moving train is not supported; drive by mounting its controls.
+- Slope blocks remain readable and traversable by the rail adapter. The placement tool currently refuses slope-transition endpoints; banking, girders, paving and the complete upstream placement UI remain unported.
+- Train add-ons, including Steam 'n' Rails, Bells & Whistles and Interiors, are not implemented yet. Uploaded JARs are references, not bundled modern binaries.

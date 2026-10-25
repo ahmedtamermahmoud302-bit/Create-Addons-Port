@@ -13,6 +13,7 @@ public final class GlueGraph {
         boolean added=neighbours.computeIfAbsent(a,p->new HashSet<>()).add(b);
         neighbours.computeIfAbsent(b,p->new HashSet<>()).add(a);return added;
     }
+    public Set<Pos> neighbours(Pos pos){return Set.copyOf(neighbours.getOrDefault(pos,Set.of()));}
     public boolean connected(Pos pos) { return neighbours.containsKey(pos) && !neighbours.get(pos).isEmpty(); }
     public boolean disconnect(Pos a,Pos b) {
         boolean removed=neighbours.containsKey(a) && neighbours.get(a).remove(b);

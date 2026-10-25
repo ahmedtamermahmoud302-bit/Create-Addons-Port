@@ -2,9 +2,9 @@
   {
     "modid": "create",
     "name": "Create",
-    "version": "0.2.0-alpha",
+    "version": "0.3.0-alpha",
     "mcversion": "1.12.2",
-    "description": "Work-in-progress Cleanroom port with kinetic motors/shafts, driveable train carriages, block tracks and Super Glue body assembly. Full Create parity, stations, long Bezier curves and addons are unfinished.",
+    "description": "Work-in-progress Cleanroom port with kinetic motors/shafts, Wrench/Goggles, flat Bezier tracks and station-assembled world-built train carriages. Full Create/add-on parity, coupled carriages, signals/schedules and machine actors remain unfinished.",
     "authorList": [
       "Create port contributors"
     ],

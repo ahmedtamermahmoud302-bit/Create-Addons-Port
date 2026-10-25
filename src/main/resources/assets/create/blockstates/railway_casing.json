@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "create:railway_casing"
+    },
+    "facing=east": {
+      "model": "create:railway_casing",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "create:railway_casing",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "create:railway_casing",
+      "y": 270
+    }
+  }
+}

@@ -1,1 +1,6 @@
-{"parent": "create:block/track/x_ortho"}
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "create:item/track"
+  }
+}

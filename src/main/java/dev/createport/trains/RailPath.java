@@ -3,7 +3,7 @@ package dev.createport.trains;
 /** Arc-length paths for the initial block-based track adapter; Create's Bezier graph is not ported yet. */
 public final class RailPath {
     public enum Shape {
-        NORTH_SOUTH, EAST_WEST, ASCENDING_EAST, ASCENDING_WEST, ASCENDING_NORTH,
+        NORTH_SOUTH, EAST_WEST, DIAGONAL_POS, DIAGONAL_NEG, ASCENDING_EAST, ASCENDING_WEST, ASCENDING_NORTH,
         ASCENDING_SOUTH, SOUTH_EAST, SOUTH_WEST, NORTH_WEST, NORTH_EAST
     }
     public record Point(double x, double y, double z) {
@@ -18,6 +18,8 @@ public final class RailPath {
     }
     public static RailPath of(Shape shape) {
         return switch (shape) {
+            case DIAGONAL_POS -> new RailPath(new Point(0,0,0),new Point(1,0,1));
+            case DIAGONAL_NEG -> new RailPath(new Point(0,0,1),new Point(1,0,0));
             case NORTH_SOUTH -> new RailPath(new Point(.5,0,0),new Point(.5,0,1));
             case EAST_WEST -> new RailPath(new Point(0,0,.5),new Point(1,0,.5));
             case ASCENDING_EAST -> new RailPath(new Point(0,0,.5),new Point(1,1,.5));

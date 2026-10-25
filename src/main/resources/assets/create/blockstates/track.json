@@ -1,33 +1,93 @@
 {
   "variants": {
-    "shape=north_south": {
+    "diagonal=none,shape=north_south": {
       "model": "create:track/z_ortho"
     },
-    "shape=east_west": {
+    "diagonal=positive,shape=north_south": {
+      "model": "create:track/z_ortho"
+    },
+    "diagonal=negative,shape=north_south": {
+      "model": "create:track/z_ortho"
+    },
+    "diagonal=none,shape=east_west": {
       "model": "create:track/x_ortho"
     },
-    "shape=ascending_east": {
+    "diagonal=positive,shape=east_west": {
+      "model": "create:track/x_ortho"
+    },
+    "diagonal=negative,shape=east_west": {
+      "model": "create:track/x_ortho"
+    },
+    "diagonal=none,shape=ascending_east": {
       "model": "create:track/ascending_east"
     },
-    "shape=ascending_west": {
+    "diagonal=positive,shape=ascending_east": {
+      "model": "create:track/ascending_east"
+    },
+    "diagonal=negative,shape=ascending_east": {
+      "model": "create:track/ascending_east"
+    },
+    "diagonal=none,shape=ascending_west": {
       "model": "create:track/ascending_west"
     },
-    "shape=ascending_north": {
+    "diagonal=positive,shape=ascending_west": {
+      "model": "create:track/ascending_west"
+    },
+    "diagonal=negative,shape=ascending_west": {
+      "model": "create:track/ascending_west"
+    },
+    "diagonal=none,shape=ascending_north": {
       "model": "create:track/ascending_north"
     },
-    "shape=ascending_south": {
+    "diagonal=positive,shape=ascending_north": {
+      "model": "create:track/ascending_north"
+    },
+    "diagonal=negative,shape=ascending_north": {
+      "model": "create:track/ascending_north"
+    },
+    "diagonal=none,shape=ascending_south": {
       "model": "create:track/ascending_south"
     },
-    "shape=south_east": {
+    "diagonal=positive,shape=ascending_south": {
+      "model": "create:track/ascending_south"
+    },
+    "diagonal=negative,shape=ascending_south": {
+      "model": "create:track/ascending_south"
+    },
+    "diagonal=none,shape=south_east": {
       "model": "create:track/south_east"
     },
-    "shape=south_west": {
+    "diagonal=positive,shape=south_east": {
+      "model": "create:track/south_east"
+    },
+    "diagonal=negative,shape=south_east": {
+      "model": "create:track/south_east"
+    },
+    "diagonal=none,shape=south_west": {
       "model": "create:track/south_west"
     },
-    "shape=north_west": {
+    "diagonal=positive,shape=south_west": {
+      "model": "create:track/south_west"
+    },
+    "diagonal=negative,shape=south_west": {
+      "model": "create:track/south_west"
+    },
+    "diagonal=none,shape=north_west": {
       "model": "create:track/north_west"
     },
-    "shape=north_east": {
+    "diagonal=positive,shape=north_west": {
+      "model": "create:track/north_west"
+    },
+    "diagonal=negative,shape=north_west": {
+      "model": "create:track/north_west"
+    },
+    "diagonal=none,shape=north_east": {
+      "model": "create:track/north_east"
+    },
+    "diagonal=positive,shape=north_east": {
+      "model": "create:track/north_east"
+    },
+    "diagonal=negative,shape=north_east": {
       "model": "create:track/north_east"
     }
   }

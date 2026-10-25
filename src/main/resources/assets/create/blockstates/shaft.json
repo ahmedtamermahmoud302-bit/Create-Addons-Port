@@ -1,0 +1,70 @@
+{
+  "variants": {
+    "axis=x,facing=north": {
+      "model": "create:shaft",
+      "z": 90
+    },
+    "axis=x,facing=south": {
+      "model": "create:shaft",
+      "z": 90
+    },
+    "axis=x,facing=east": {
+      "model": "create:shaft",
+      "z": 90
+    },
+    "axis=x,facing=west": {
+      "model": "create:shaft",
+      "z": 90
+    },
+    "axis=x,facing=up": {
+      "model": "create:shaft",
+      "z": 90
+    },
+    "axis=x,facing=down": {
+      "model": "create:shaft",
+      "z": 90
+    },
+    "axis=y,facing=north": {
+      "model": "create:shaft"
+    },
+    "axis=y,facing=south": {
+      "model": "create:shaft"
+    },
+    "axis=y,facing=east": {
+      "model": "create:shaft"
+    },
+    "axis=y,facing=west": {
+      "model": "create:shaft"
+    },
+    "axis=y,facing=up": {
+      "model": "create:shaft"
+    },
+    "axis=y,facing=down": {
+      "model": "create:shaft"
+    },
+    "axis=z,facing=north": {
+      "model": "create:shaft",
+      "x": 90
+    },
+    "axis=z,facing=south": {
+      "model": "create:shaft",
+      "x": 90
+    },
+    "axis=z,facing=east": {
+      "model": "create:shaft",
+      "x": 90
+    },
+    "axis=z,facing=west": {
+      "model": "create:shaft",
+      "x": 90
+    },
+    "axis=z,facing=up": {
+      "model": "create:shaft",
+      "x": 90
+    },
+    "axis=z,facing=down": {
+      "model": "create:shaft",
+      "x": 90
+    }
+  }
+}

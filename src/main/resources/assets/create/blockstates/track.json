@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "shape=north_south": {
+      "model": "create:track/z_ortho"
+    },
+    "shape=east_west": {
+      "model": "create:track/x_ortho"
+    },
+    "shape=ascending_east": {
+      "model": "create:track/ascending_east"
+    },
+    "shape=ascending_west": {
+      "model": "create:track/ascending_west"
+    },
+    "shape=ascending_north": {
+      "model": "create:track/ascending_north"
+    },
+    "shape=ascending_south": {
+      "model": "create:track/ascending_south"
+    },
+    "shape=south_east": {
+      "model": "create:track/south_east"
+    },
+    "shape=south_west": {
+      "model": "create:track/south_west"
+    },
+    "shape=north_west": {
+      "model": "create:track/north_west"
+    },
+    "shape=north_east": {
+      "model": "create:track/north_east"
+    }
+  }
+}

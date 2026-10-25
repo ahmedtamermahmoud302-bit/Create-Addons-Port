@@ -1,0 +1,70 @@
+{
+  "variants": {
+    "axis=x,facing=north": {
+      "model": "create:creative_motor/block",
+      "y": 180
+    },
+    "axis=x,facing=south": {
+      "model": "create:creative_motor/block"
+    },
+    "axis=x,facing=east": {
+      "model": "create:creative_motor/block",
+      "y": 270
+    },
+    "axis=x,facing=west": {
+      "model": "create:creative_motor/block",
+      "y": 90
+    },
+    "axis=x,facing=up": {
+      "model": "create:creative_motor/block_vertical"
+    },
+    "axis=x,facing=down": {
+      "model": "create:creative_motor/block_vertical",
+      "x": 180
+    },
+    "axis=y,facing=north": {
+      "model": "create:creative_motor/block",
+      "y": 180
+    },
+    "axis=y,facing=south": {
+      "model": "create:creative_motor/block"
+    },
+    "axis=y,facing=east": {
+      "model": "create:creative_motor/block",
+      "y": 270
+    },
+    "axis=y,facing=west": {
+      "model": "create:creative_motor/block",
+      "y": 90
+    },
+    "axis=y,facing=up": {
+      "model": "create:creative_motor/block_vertical"
+    },
+    "axis=y,facing=down": {
+      "model": "create:creative_motor/block_vertical",
+      "x": 180
+    },
+    "axis=z,facing=north": {
+      "model": "create:creative_motor/block",
+      "y": 180
+    },
+    "axis=z,facing=south": {
+      "model": "create:creative_motor/block"
+    },
+    "axis=z,facing=east": {
+      "model": "create:creative_motor/block",
+      "y": 270
+    },
+    "axis=z,facing=west": {
+      "model": "create:creative_motor/block",
+      "y": 90
+    },
+    "axis=z,facing=up": {
+      "model": "create:creative_motor/block_vertical"
+    },
+    "axis=z,facing=down": {
+      "model": "create:creative_motor/block_vertical",
+      "x": 180
+    }
+  }
+}

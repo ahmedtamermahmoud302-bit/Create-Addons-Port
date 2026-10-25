@@ -1,0 +1,6 @@
+tile.create.shaft.name=Shaft
+tile.create.creative_motor.name=Creative Motor
+tile.create.track.name=Railway Track
+item.create.train_carriage.name=Train Carriage
+entity.create.train_carriage.name=Train Carriage
+item.create.super_glue.name=Super Glue

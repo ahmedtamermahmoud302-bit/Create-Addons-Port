@@ -1,0 +1,25 @@
+plugins {
+    id 'java'
+    id 'com.cleanroommc.cleanroomgradle'
+}
+group = 'dev.createport'
+version = '0.2.0-alpha'
+base { archivesName = 'create' }
+java { toolchain { languageVersion = JavaLanguageVersion.of(25) } }
+repositories { mavenCentral() }
+dependencies {
+    implementation cleanroom.userdev('0.7.4-alpha')
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+test { useJUnitPlatform() }
+cleanroom { runs { client {}; server {} } }
+
+// Required by the current Cleanroom template to keep Foundation's class loading consistent.
+tasks.withType(JavaExec).configureEach {
+    systemProperty 'foundation.loadsall', 'true'
+}
+
+jar {
+    from(files('CREATE-LICENSE','THIRD_PARTY_NOTICES.md')) { into 'META-INF' }
+}

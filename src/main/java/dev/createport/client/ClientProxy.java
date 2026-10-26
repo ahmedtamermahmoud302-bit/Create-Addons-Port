@@ -26,7 +26,7 @@ public final class ClientProxy extends CommonProxy {
     @Override public void acceptGlueData(net.minecraft.nbt.NBTTagCompound data){GlueVisuals.accept(data);}
     @Override public void openStation(net.minecraft.util.math.BlockPos pos){net.minecraft.client.Minecraft.getMinecraft().displayGuiScreen(new StationScreen(pos));}
     @SubscribeEvent public static void stitch(net.minecraftforge.client.event.TextureStitchEvent.Pre event){
-        event.getMap().registerSprite(new ResourceLocation("create:block/railway_casing_connected"));event.getMap().registerSprite(new ResourceLocation("create:block/railway_casing_side_connected"));
+        event.getMap().registerSprite(new ResourceLocation("create:block/belt_scroll"));event.getMap().registerSprite(new ResourceLocation("create:block/belt_diagonal_scroll"));event.getMap().registerSprite(new ResourceLocation("create:block/railway_casing_connected"));event.getMap().registerSprite(new ResourceLocation("create:block/railway_casing_side_connected"));
     }
     @SubscribeEvent public static void bake(net.minecraftforge.client.event.ModelBakeEvent event){
         var atlas=net.minecraft.client.Minecraft.getMinecraft().getTextureMapBlocks();
@@ -37,6 +37,15 @@ public final class ClientProxy extends CommonProxy {
         event.getModelRegistry().putObject(key,new GogglesModel(event.getModelRegistry().getObject(key),event.getModelRegistry().getObject(worn)));
     }
     @SubscribeEvent public static void models(ModelRegistryEvent event) {
+        for(var block:Create.MACHINES){
+            var builder=new net.minecraft.client.renderer.block.statemap.StateMap.Builder();
+            if(block.kind==dev.createport.kinetics.MechanicalBlock.Kind.CRANK)builder.ignore(dev.createport.kinetics.KineticBlock.AXIS,dev.createport.kinetics.MechanicalBlock.POWERED,dev.createport.kinetics.MechanicalBlock.PART,dev.createport.kinetics.MechanicalBlock.ALONG);
+            else if(block.chain()){builder.ignore(dev.createport.kinetics.KineticBlock.FACING);if(block.kind==dev.createport.kinetics.MechanicalBlock.Kind.CHAIN)builder.ignore(dev.createport.kinetics.MechanicalBlock.POWERED);}
+            else{builder.ignore(dev.createport.kinetics.KineticBlock.FACING,dev.createport.kinetics.MechanicalBlock.PART,dev.createport.kinetics.MechanicalBlock.ALONG);if(block.kind!=dev.createport.kinetics.MechanicalBlock.Kind.CLUTCH&&block.kind!=dev.createport.kinetics.MechanicalBlock.Kind.GEARSHIFT)builder.ignore(dev.createport.kinetics.MechanicalBlock.POWERED);}
+            ModelLoader.setCustomStateMapper(block,builder.build());if(block!=Create.BELT)ModelLoader.setCustomModelResourceLocation(Item.getItemFromBlock(block),0,new ModelResourceLocation(block.getRegistryName(),"inventory"));
+        }
+        ModelLoader.setCustomModelResourceLocation(Create.VERTICAL_GEARBOX,0,new ModelResourceLocation("create:vertical_gearbox","inventory"));ModelLoader.setCustomModelResourceLocation(Create.BELT_CONNECTOR,0,new ModelResourceLocation("create:belt_connector","inventory"));
+        for(String part:MechanicalRenderer.PARTS)ModelLoader.registerItemVariants(Item.getItemFromBlock(Create.COGWHEEL),new ResourceLocation("create:partial_"+part));
         for(String part:new String[]{"track_station_flag_on","track_station_flag_off","track_station_flag_assemble","track_overlay_station","track_overlay_assembling"})ModelLoader.registerItemVariants(Item.getItemFromBlock(Create.TRACK_STATION),new ResourceLocation("create:partial_"+part));
         for(var seat:Create.SEATS)ModelLoader.setCustomModelResourceLocation(Item.getItemFromBlock(seat),0,new ModelResourceLocation(seat.getRegistryName(),"inventory"));
         for(var block:new net.minecraft.block.Block[]{Create.RAILWAY_CASING,Create.TRAIN_CONTROLS,Create.TRACK_STATION})

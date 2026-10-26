@@ -9,75 +9,52 @@ import net.minecraft.util.*;
 import net.minecraft.util.math.BlockPos;
 import java.util.*;
 
-public final class KineticTile extends TileEntity implements ITickable {
+public class KineticTile extends TileEntity implements ITickable {
+    @Override public net.minecraft.util.math.AxisAlignedBB getRenderBoundingBox(){return new net.minecraft.util.math.AxisAlignedBB(pos).grow(1);}
+    @Override public double getMaxRenderDistanceSquared(){return 256*256;}
     @Override public boolean shouldRefresh(net.minecraft.world.World world,BlockPos pos,IBlockState oldState,IBlockState newState){return oldState.getBlock()!=newState.getBlock();}
-    public int generatedRpm = 16;
+    public int generatedRpm = 16,crankTicks;public float crankAngle,crankVelocity;
+    public final float[] portRpm=new float[6];
+    public BlockPos beltFirst,beltLast;public int beltIndex,beltLength;public boolean beltPaid;
+    public float portRpm(EnumFacing side){return portRpm[side.getIndex()];}
     public float rpm,theoreticalRpm;
     public double networkCapacity,networkStress;
     public int networkMembers;
     public KineticNetwork.Status status = KineticNetwork.Status.UNPOWERED;
     public EnumFacing.Axis axis() { return world.getBlockState(pos).getValue(KineticBlock.AXIS); }
     public EnumFacing facing() { return world.getBlockState(pos).getValue(KineticBlock.FACING); }
-    public boolean connects(EnumFacing side) { return motor() ? side == facing() : side.getAxis() == axis(); }
+    public boolean connects(EnumFacing side) { return KineticTopology.hasPort(world.getBlockState(pos),side); }
     public boolean motor() { return world.getBlockState(pos).getBlock() instanceof KineticBlock b && b.motor; }
     public void setGeneratedRpm(int speed) {
         if (world.isRemote || !motor()) return;
         generatedRpm = Math.max(-256, Math.min(256, speed)); markDirty();
-        recompute(); sync();
+        KineticTopology.invalidate(world);recompute(); sync();
     }
     @Override public void update() {
-        if (!world.isRemote && Math.floorMod(world.getTotalWorldTime() + pos.toLong(), 10) == 0) recompute();
+        if(isInvalid()||world.getTileEntity(pos)!=this||!(world.getBlockState(pos).getBlock() instanceof KineticBlock))return;
+        if(world.isRemote){if(world.getBlockState(pos).getBlock() instanceof MechanicalBlock m&&m.kind==MechanicalBlock.Kind.CRANK){crankVelocity+=(rpm*10/3-crankVelocity)*.25f;crankAngle+=crankVelocity;}if(beltFirst!=null&&beltFirst.equals(pos))BeltTransport.tick(this);return;}
+        if(crankTicks>0&&--crankTicks==0){KineticTopology.invalidate(world);recompute();}
+        if(beltFirst!=null&&beltFirst.equals(pos))BeltTransport.tick(this);
+        if(Math.floorMod(world.getTotalWorldTime()+pos.toLong(),10)==0)recompute();
     }
     public static void refreshAround(net.minecraft.world.World world,BlockPos pos) {
-        if(world.isRemote)return;
+        if(world.isRemote)return;KineticTopology.invalidate(world);
         java.util.List<BlockPos> positions=new java.util.ArrayList<>();positions.add(pos);
-        for(EnumFacing side:EnumFacing.values())positions.add(pos.offset(side));
+        for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)for(int z=-1;z<=1;z++)positions.add(pos.add(x,y,z));
         for(BlockPos p:positions) if(world.isBlockLoaded(p) && world.getBlockState(p).getBlock() instanceof KineticBlock
                 && world.getTileEntity(p) instanceof KineticTile tile)tile.recompute();
     }
-    private void recompute() {
-        List<KineticTile> members = new ArrayList<>();
-        Set<BlockPos> visited = new HashSet<>(); ArrayDeque<BlockPos> queue = new ArrayDeque<>(); queue.add(pos);
-        while (!queue.isEmpty()) {
-            BlockPos p = queue.remove(); if (!visited.add(p) || !world.isBlockLoaded(p)) continue;
-            if (!(world.getTileEntity(p) instanceof KineticTile tile) || tile.axis() != axis()) continue;
-            members.add(tile);
-            for (EnumFacing direction : EnumFacing.values()) {
-                BlockPos adjacent = p.offset(direction);
-                if (tile.connects(direction) && world.isBlockLoaded(adjacent)
-                        && world.getTileEntity(adjacent) instanceof KineticTile other && other.connects(direction.getOpposite())) queue.add(adjacent);
-            }
-        }
-        List<KineticNetwork.Node> nodes = new ArrayList<>(); List<KineticNetwork.Edge> edges = new ArrayList<>();
-        Map<BlockPos, Integer> ids = new HashMap<>();
-        for (int i = 0; i < members.size(); i++) {
-            KineticTile tile = members.get(i); ids.put(tile.pos, i);
-            nodes.add(new KineticNetwork.Node(i, tile.motor() ? tile.generatedRpm * (tile.facing().getAxisDirection() == EnumFacing.AxisDirection.POSITIVE ? 1 : -1) : 0, tile.motor() ? 16384 : 0, 0));
-        }
-        for (int i = 0; i < members.size(); i++) for (EnumFacing direction : EnumFacing.values()) {
-            if (direction.getAxis() != axis()) continue;
-            Integer j = ids.get(members.get(i).pos.offset(direction));
-            if (j != null && i < j && members.get(i).connects(direction) && members.get(j).connects(direction.getOpposite())) edges.add(new KineticNetwork.Edge(i, j, 1));
-        }
-        KineticNetwork.Result result = KineticNetwork.solve(nodes, edges, 256);
-        for (int i = 0; i < members.size(); i++) {
-            KineticTile tile = members.get(i); float speed = (float) result.speed(i);
-            float theory=result.theoreticalRpm().getOrDefault(i,0d).floatValue();
-            if (tile.rpm != speed || tile.status != result.status() || tile.theoreticalRpm!=theory
-                    || tile.networkCapacity!=result.capacity() || tile.networkStress!=result.stress() || tile.networkMembers!=members.size()) {
-                tile.theoreticalRpm=theory;tile.networkCapacity=result.capacity();tile.networkStress=result.stress();tile.networkMembers=members.size();
-                tile.rpm = speed; tile.status = result.status(); tile.markDirty(); tile.sync();
-            }
-        }
-    }
-    private void sync() { IBlockState state = world.getBlockState(pos); world.notifyBlockUpdate(pos, state, state, 3); }
+    public void recompute(){if(world==null||isInvalid()||world.getTileEntity(pos)!=this||!(world.getBlockState(pos).getBlock() instanceof KineticBlock))return;if(beltFirst!=null&&!pos.equals(beltFirst)&&!pos.equals(beltLast))return;KineticTopology.solve(this);}
+    public void sync() { IBlockState state = world.getBlockState(pos); world.notifyBlockUpdate(pos, state, state, 3); }
     @Override public NBTTagCompound writeToNBT(NBTTagCompound nbt) {
-        super.writeToNBT(nbt); nbt.setInteger("GeneratedRPM", generatedRpm); nbt.setFloat("RPM", rpm); nbt.setString("Status", status.name());
+        super.writeToNBT(nbt);nbt.setInteger("CrankTicks",crankTicks);var ports=new net.minecraft.nbt.NBTTagList();for(float speed:portRpm)ports.appendTag(new net.minecraft.nbt.NBTTagFloat(speed));nbt.setTag("PortRPM",ports);
+        if(beltFirst!=null&&beltLast!=null){nbt.setLong("BeltFirst",beltFirst.toLong());nbt.setLong("BeltLast",beltLast.toLong());nbt.setInteger("BeltIndex",beltIndex);nbt.setInteger("BeltLength",beltLength);nbt.setBoolean("BeltPaid",beltPaid);} nbt.setInteger("GeneratedRPM", generatedRpm); nbt.setFloat("RPM", rpm); nbt.setString("Status", status.name());
         nbt.setFloat("TheoreticalRPM",theoreticalRpm);nbt.setDouble("NetworkCapacity",networkCapacity);
         nbt.setDouble("NetworkStress",networkStress);nbt.setInteger("NetworkMembers",networkMembers);return nbt;
     }
     @Override public void readFromNBT(NBTTagCompound nbt) {
-        super.readFromNBT(nbt); generatedRpm = nbt.hasKey("GeneratedRPM") ? Math.max(-256, Math.min(256, nbt.getInteger("GeneratedRPM"))) : 16;
+        super.readFromNBT(nbt);crankTicks=Math.max(0,Math.min(10,nbt.getInteger("CrankTicks")));var ports=nbt.getTagList("PortRPM",5);for(int i=0;i<6;i++)portRpm[i]=i<ports.tagCount()?ports.getFloatAt(i):nbt.getFloat("RPM");
+        beltFirst=nbt.hasKey("BeltFirst")?BlockPos.fromLong(nbt.getLong("BeltFirst")):null;beltLast=nbt.hasKey("BeltLast")?BlockPos.fromLong(nbt.getLong("BeltLast")):null;beltIndex=nbt.getInteger("BeltIndex");beltLength=Math.max(0,Math.min(21,nbt.getInteger("BeltLength")));beltPaid=nbt.getBoolean("BeltPaid"); generatedRpm = nbt.hasKey("GeneratedRPM") ? Math.max(-256, Math.min(256, nbt.getInteger("GeneratedRPM"))) : 16;
         rpm = nbt.getFloat("RPM"); if (!Float.isFinite(rpm)) rpm = 0;
         theoreticalRpm=nbt.hasKey("TheoreticalRPM") ? nbt.getFloat("TheoreticalRPM"):rpm;
         if(!Float.isFinite(theoreticalRpm))theoreticalRpm=0;

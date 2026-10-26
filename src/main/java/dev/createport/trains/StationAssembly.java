@@ -26,7 +26,7 @@ public final class StationAssembly {
         var shape=TrainTrackBlock.pathShape(world.getBlockState(target));
         if(shape!=RailPath.Shape.EAST_WEST && shape!=RailPath.Shape.NORTH_SOUTH){station.error(player,"Assembly requires straight track.");return;}
         List<BlockPos> bogeys=new ArrayList<>();
-        station.refresh();for(int i=1;i<=station.assemblyLength;i++){BlockPos p=target.offset(station.direction,i).up();if(world.getBlockState(p).getBlock()==Create.SMALL_BOGEY)bogeys.add(p);}
+        station.refresh();for(int i=1;i<=station.assemblyLength;i++){BlockPos p=target.offset(station.direction,i).up();if(Bogeys.is(world.getBlockState(p)))bogeys.add(p);}
         if(bogeys.isEmpty() || bogeys.size()>2){station.error(player,"Place one or two bogeys for this carriage using Train Casing on the track.");return;}
         if(!bogeys.get(0).equals(target.offset(station.direction).up())){station.error(player,"The frontmost bogey must be directly at the station marker.");return;}
         bogeys.sort(Comparator.comparingInt(p->station.offset(p.down())));
@@ -36,12 +36,12 @@ public final class StationAssembly {
             BlockPos p=pending.remove();if(!selected.add(p))continue;
             if(selected.size()>256){station.error(player,"This carriage exceeds the 256-block assembly limit.");return;}
             if(!world.isBlockLoaded(p) || !world.isBlockModifiable(player,p) || !player.canPlayerEdit(p,EnumFacing.UP,player.getHeldItemMainhand())){station.error(player,"A block cannot be moved from this position.");return;}
-            var state=world.getBlockState(p);boolean bogey=state.getBlock()==Create.SMALL_BOGEY;
+            var state=world.getBlockState(p);boolean bogey=Bogeys.is(state);
             if(!state.getMaterial().isSolid() || state.getBlockHardness(world,p)<0 || state.getBlock().hasTileEntity(state) && !bogey){station.error(player,"This carriage cannot capture inventories, machines, or unbreakable blocks yet.");return;}
             if(state.getBlock()==Create.TRACK_STATION){station.error(player,"The station must remain outside the glued carriage.");return;}
             for(var connected:glue.neighbours(world,p))if(!GlueWorldData.block(connected).equals(p))pending.add(GlueWorldData.block(connected));
             if(bogey && !world.isAirBlock(p.up()))pending.add(p.up());
-            if(world.getBlockState(p.down()).getBlock()==Create.SMALL_BOGEY)pending.add(p.down());
+            if(Bogeys.is(world.getBlockState(p.down())))pending.add(p.down());
         }
         if(!selected.containsAll(bogeys)){station.error(player,"Glue the bodies above the bogeys into one connected carriage.");return;}
         if(selected.stream().noneMatch(p->world.getBlockState(p).getBlock()==Create.TRAIN_CONTROLS)){station.error(player,"Add Train Controls to the glued carriage.");return;}
@@ -54,7 +54,7 @@ public final class StationAssembly {
         Map<BlockPos,IBlockState> source=new LinkedHashMap<>();List<TrainStructure.Part> parts=new ArrayList<>();
         for(BlockPos p:selected){BlockPos offset=local(p,first,yaw);if(Math.abs(offset.getX())>8 || offset.getY()<0 || offset.getY()>12 || Math.abs(offset.getZ())>24){station.error(player,"Carriage body is outside the supported 17 x 49 x 13 envelope.");return;}
             var state=world.getBlockState(p);source.put(p,state);parts.add(new TrainStructure.Part(offset.getX(),offset.getY(),offset.getZ(),state.withRotation(rotation(yaw,true))));}
-        NBTTagCompound info=new NBTTagCompound();info.setLong("Station",station.getPos().toLong());info.setString("Name",station.trainName);NBTTagList bonds=new NBTTagList();
+        NBTTagCompound info=new NBTTagCompound();info.setLong("Station",station.getPos().toLong());info.setInteger("Dimension",world.provider.getDimension());info.setString("Name",station.trainName);NBTTagList bonds=new NBTTagList();
         for(var bond:glue.graph().bonds()){
             BlockPos a=GlueWorldData.block(bond.a()),b=GlueWorldData.block(bond.b());if(!selected.contains(a)||!selected.contains(b))continue;
             var n=new NBTTagCompound();n.setLong("A",local(a,first,yaw).toLong());n.setLong("B",local(b,first,yaw).toLong());bonds.appendTag(n);
@@ -67,7 +67,7 @@ public final class StationAssembly {
         List<BlockPos> removed=new ArrayList<>();
         for(var entry:source.entrySet())if(world.setBlockState(entry.getKey(),Blocks.AIR.getDefaultState(),2))removed.add(entry.getKey());else{
             for(BlockPos p:removed)world.setBlockState(p,source.get(p),2);train.setDead();station.error(player,"Assembly was interrupted; source blocks restored.");return;}
-        glue.captured(source.keySet());
+        glue.captured(source.keySet());train.dock(station);
         station.assembling=false;station.status(player,"Assembled "+parts.size()+" blocks. Use the controls on the moving carriage to drive.");
     }
     public static void disassemble(TrainStationTile station,TrainEntity train,EntityPlayer player){

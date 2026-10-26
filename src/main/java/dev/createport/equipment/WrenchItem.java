@@ -40,7 +40,8 @@ public final class WrenchItem extends Item {
     public static IBlockState rotated(IBlockState state,EnumFacing face) {
         if(state.getBlock() instanceof dev.createport.trains.RailwayBlock railway){return face.getAxis()==EnumFacing.Axis.Y && railway.kind!=dev.createport.trains.RailwayBlock.Kind.CASING ? state.withProperty(dev.createport.trains.RailwayBlock.FACING,state.getValue(dev.createport.trains.RailwayBlock.FACING).rotateY()):state;}
         if(!(state.getBlock() instanceof KineticBlock block))return state;
-        if(block.motor) {
+        if(block instanceof MechanicalBlock machine&&machine.kind==MechanicalBlock.Kind.BELT)return state;
+        if(block.motor || block instanceof dev.createport.kinetics.MechanicalBlock machine&&machine.kind==dev.createport.kinetics.MechanicalBlock.Kind.CRANK) {
             EnumFacing facing=state.getValue(KineticBlock.FACING);
             if(facing.getAxis()==face.getAxis())return state;
             EnumFacing next=turn(facing,face.getAxis());

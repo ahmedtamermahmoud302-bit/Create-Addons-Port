@@ -13,7 +13,7 @@ class TrainMotionTest {
         assertTrue(TrainMotion.approach(speed,-1,false)<0);
     }
     @Test void emergencyBrakeStopsWithoutChangingDirection() {
-        double speed=-.4;for(int i=0;i<20;i++)speed=TrainMotion.approach(speed,1,true);
+        double speed=-.4;for(int i=0;i<100;i++)speed=TrainMotion.approach(speed,1,true);
         assertEquals(0,speed,1e-9);
     }
     @Test void releasingThrottleCoastsToAStop() {

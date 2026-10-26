@@ -4,11 +4,15 @@ cd "$(dirname "$0")/.."
 source /workspace/toolchains/activate.sh
 mkdir -p build/core-test-classes
 javac -cp /workspace/toolchains/junit.jar -d build/core-test-classes \
+    src/main/java/dev/createport/kinetics/TransmissionRules.java \
+    src/main/java/dev/createport/kinetics/BeltGeometry.java \
     src/main/java/dev/createport/kinetics/KineticNetwork.java \
     src/main/java/dev/createport/equipment/WrenchRotation.java \
     src/main/java/dev/createport/equipment/KineticReadout.java \
     src/main/java/dev/createport/trains/TrackCurve.java \
     src/main/java/dev/createport/trains/TrackPlacement.java \
+    src/main/java/dev/createport/trains/PlatformGeometry.java \
+    src/main/java/dev/createport/trains/StationApproach.java \
     src/main/java/dev/createport/trains/CasingCT.java \
     src/main/java/dev/createport/glue/GlueSelection.java \
     src/main/java/dev/createport/trains/RailPath.java \
@@ -16,10 +20,14 @@ javac -cp /workspace/toolchains/junit.jar -d build/core-test-classes \
     src/main/java/dev/createport/trains/TrainMotion.java \
     src/main/java/dev/createport/trains/ObjGeometry.java \
     src/main/java/dev/createport/glue/GlueGraph.java \
+    src/test/java/dev/createport/kinetics/TransmissionRulesTest.java \
+    src/test/java/dev/createport/kinetics/BeltGeometryTest.java \
     src/test/java/dev/createport/kinetics/KineticNetworkTest.java \
     src/test/java/dev/createport/equipment/EquipmentMathTest.java \
     src/test/java/dev/createport/trains/TrackCurveTest.java \
     src/test/java/dev/createport/trains/TrackPlacementTest.java \
+    src/test/java/dev/createport/trains/PlatformGeometryTest.java \
+    src/test/java/dev/createport/trains/StationApproachTest.java \
     src/test/java/dev/createport/trains/CasingCTTest.java \
     src/test/java/dev/createport/glue/GlueSelectionTest.java \
     src/test/java/dev/createport/trains/RailNavigatorTest.java \

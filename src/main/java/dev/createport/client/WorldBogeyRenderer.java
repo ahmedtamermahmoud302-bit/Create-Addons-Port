@@ -8,6 +8,6 @@ public final class WorldBogeyRenderer extends TileEntitySpecialRenderer<BogeyTil
         GlStateManager.pushMatrix();GlStateManager.translate(x+.5,y-1.15,z+.5);
         if(state.getValue(RailwayBlock.FACING).getAxis()==net.minecraft.util.EnumFacing.Axis.X)GlStateManager.rotate(90,0,1,0);
         int light=state.getPackedLightmapCoords(tile.getWorld(),tile.getPos().down());OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit,light&65535,light>>16);
-        GlStateManager.disableCull();GlStateManager.enableRescaleNormal();GlStateManager.color(1,1,1,1);TrainRenderer.drawBogey(0);GlStateManager.disableRescaleNormal();GlStateManager.enableCull();GlStateManager.popMatrix();
+        GlStateManager.disableCull();GlStateManager.enableRescaleNormal();GlStateManager.color(1,1,1,1);TrainRenderer.drawBogey(0,Bogeys.large(state));GlStateManager.disableRescaleNormal();GlStateManager.enableCull();GlStateManager.popMatrix();
     }
 }

@@ -3,6 +3,7 @@ import dev.createport.trains.*;
 import net.minecraft.client.renderer.*;
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
 public final class AnchorTrackRenderer extends TileEntitySpecialRenderer<TrackRenderTile> {
+    @Override public boolean isGlobalRenderer(TrackRenderTile tile){return tile.connections.tagCount()>0;}
     @Override public void render(TrackRenderTile tile,double x,double y,double z,float partial,int destroy,float alpha){
         var state=tile.getWorld().getBlockState(tile.getPos());if(!(state.getBlock() instanceof TrainTrackBlock))return;
         var diagonal=state.getValue(TrainTrackBlock.DIAGONAL);var shape=state.getValue(TrainTrackBlock.SHAPE);

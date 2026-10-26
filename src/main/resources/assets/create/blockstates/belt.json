@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "create:belt/particle"
+    },
+    "axis=y": {
+      "model": "create:belt/particle"
+    },
+    "axis=z": {
+      "model": "create:belt/particle"
+    }
+  }
+}

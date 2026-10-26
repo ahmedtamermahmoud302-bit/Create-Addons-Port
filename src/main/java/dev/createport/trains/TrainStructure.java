@@ -25,7 +25,7 @@ public final class TrainStructure {
             Block block=Block.getBlockFromName(n.getString("Block"));
             if(block==null || block==Blocks.AIR || Math.abs(x)>8 || y<0 || y>12 || Math.abs(z)>24)continue;
             IBlockState state=block.getStateFromMeta(Math.floorMod(n.getInteger("Meta"),16));
-            if(state.getMaterial().isSolid() && (!block.hasTileEntity(state) || block==dev.createport.Create.SMALL_BOGEY))result.add(new Part(x,y,z,state));
+            if(state.getMaterial().isSolid() && (!block.hasTileEntity(state) || Bogeys.is(block)))result.add(new Part(x,y,z,state));
         }
         return List.copyOf(result);
     }

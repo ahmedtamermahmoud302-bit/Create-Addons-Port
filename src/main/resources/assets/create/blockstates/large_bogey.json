@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "create:track/bogey/top"
+    },
+    "facing=east": {
+      "model": "create:track/bogey/top",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "create:track/bogey/top",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "create:track/bogey/top",
+      "y": 270
+    }
+  }
+}

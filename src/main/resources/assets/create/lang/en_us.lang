@@ -67,3 +67,20 @@ create.contraption.door_control.south=South Side Only
 create.contraption.door_control.south.short=South
 create.contraption.door_control.west=West Side Only
 create.contraption.door_control.west.short=West
+
+tile.create.large_bogey.name=Large Bogey
+death.attack.create.train=%1$s was run over by %2$s
+create.contraption.controls.approach_station=Hold %s to approach %s
+create.train.arrived_at=Arrived at %s
+create.train.departing_from=Departing from %s
+
+tile.create.cogwheel.name=Cogwheel
+tile.create.large_cogwheel.name=Large Cogwheel
+tile.create.hand_crank.name=Hand Crank
+tile.create.gearbox.name=Gearbox
+tile.create.clutch.name=Clutch
+tile.create.gearshift.name=Gearshift
+tile.create.encased_chain_drive.name=Encased Chain Drive
+tile.create.adjustable_chain_gearshift.name=Adjustable Chain Gearshift
+item.create.vertical_gearbox.name=Vertical Gearbox
+item.create.belt_connector.name=Belt

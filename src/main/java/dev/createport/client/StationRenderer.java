@@ -30,7 +30,7 @@ public final class StationRenderer extends TileEntitySpecialRenderer<TrainStatio
         GlStateManager.translate(-tile.getPos().getX(),-tile.getPos().getY(),-tile.getPos().getZ());
         if(!tile.assembling||tile.trainPresent)overlay(tile.target,tile.direction,"station",0xffffff);
         else for(int i=0;i<tile.assemblyLength;i++){
-            BlockPos p=tile.target.offset(tile.direction,i+1);int color=tile.validBogeyOffset(i)?0x96B5FF:-1;if(tile.getWorld().getBlockState(p.up()).getBlock()==Create.SMALL_BOGEY)color=0xCAFF96;if(color!=-1)overlay(p,tile.direction,"assembling",color);
+            BlockPos p=tile.target.offset(tile.direction,i+1);int color=tile.validBogeyOffset(i)?0x96B5FF:-1;if(Bogeys.is(tile.getWorld().getBlockState(p.up())))color=0xCAFF96;if(color!=-1)overlay(p,tile.direction,"assembling",color);
         }
         GlStateManager.enableCull();GlStateManager.disableRescaleNormal();GlStateManager.color(1,1,1,1);GlStateManager.popMatrix();
     }

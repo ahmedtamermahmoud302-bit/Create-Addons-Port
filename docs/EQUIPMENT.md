@@ -16,10 +16,12 @@ The Wrench model includes the original gear geometry; its custom animated gear r
 
 Use to equip the head slot, swapping back the previous helmet. Goggles can also be placed in the head slot or equipped by a dispenser. They add no armor or durability. A model perspective switch selects the original 3D mesh for vanilla's head equipment layer, preserving the original head transform.
 
-While worn, look at a shaft or motor for actual synchronized speed, capacity, stress and remaining capacity. Without worn Goggles, that information HUD is hidden. Hold Sneak for theoretical speed, network size/status and orientation. This is a native 1.12 HUD adapter, not a pixel-identical recreation of every modern Create tooltip. Only implemented kinetic blocks supply information; processing-machine and fluid readouts await those ports.
+While worn, look at a Creative Motor or Hand Crank to see the compact original-style Generator Stats tooltip: Kinetic Stress Capacity and the current capacity in aqua, followed by the dark gray current-speed text. It uses the Goggles icon, vanilla purple border, source offset and fade. Passive shafts do not add a generic statistics panel. Without worn Goggles, this tooltip is hidden. Processing-machine and fluid readouts await those ports; rendering on 1.12 has not been certified pixel-identical.
 
 ## Creative Motor controls
 
 Look at an active side of a motor to see its in-world numeric setting and hover outline. Aim at that value and hold Use to open the original two-row speed board. Choose direction/speed with the pointer and release Use to confirm; hold Shift to snap to 32-RPM milestones. This is a setting control, so it is usable without Goggles. The information HUD still requires Goggles.
 
 The rotating shaft binds the block atlas and restores white color/lighting explicitly, preventing glue/track overlay textures from coloring it green.
+
+Motor and Shaft placement now follows the nearest look direction and compatible neighboring shaft axes. The motor points toward a compatible neighbor; otherwise it points back toward the player, with Sneak reversing the fallback. Shaft Sneak-placement can use the clicked face axis when an adjacent preference exists. See [kinetic parts](KINETICS.md).

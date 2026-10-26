@@ -13,9 +13,22 @@ public final class TrainCasingItem extends ItemBlock {
         if(world.isRemote)return EnumActionResult.SUCCESS;
         var station=TrainStationTile.assemblyFor(world,pos);if(station==null){player.sendStatusMessage(new TextComponentString("Enter assembly mode at a nearby Train Station first."),true);return EnumActionResult.FAIL;}
         var shape=TrainTrackBlock.pathShape(world.getBlockState(pos));if(shape!=RailPath.Shape.EAST_WEST && shape!=RailPath.Shape.NORTH_SOUTH)return EnumActionResult.FAIL;
-        station.refresh();if(!station.validBogeyOffset(station.offset(pos)))return EnumActionResult.FAIL;
+        station.refresh();
+        // The adjacent rail remains reachable when the bogey/body occludes its own rail.
+        BlockPos bogeyPos=pos.up();
+        if(!station.validBogeyOffset(station.offset(pos)))for(int i=-1;i<=1;i++){
+            var candidate=pos.offset(station.direction,i).up();if(Bogeys.is(world.getBlockState(candidate))){bogeyPos=candidate;break;}
+        }
+        var existing=world.getBlockState(bogeyPos);
+        if(Bogeys.is(existing)){
+            if(!world.isBlockModifiable(player,bogeyPos)||!player.canPlayerEdit(bogeyPos,face,player.getHeldItem(hand)))return EnumActionResult.FAIL;
+            var next=(Bogeys.large(existing)?Create.SMALL_BOGEY:Create.LARGE_BOGEY).getDefaultState().withProperty(RailwayBlock.FACING,existing.getValue(RailwayBlock.FACING));
+            if(!world.setBlockState(bogeyPos,next,3))return EnumActionResult.FAIL;
+            station.status(player,Bogeys.large(next)?"Standard Bogey: Large":"Standard Bogey: Small");return EnumActionResult.SUCCESS;
+        }
+        if(!station.validBogeyOffset(station.offset(pos)))return EnumActionResult.FAIL;
         BlockPos top=pos.up();if(!world.isAirBlock(top) || !world.isBlockModifiable(player,top) || !player.canPlayerEdit(top,face,player.getHeldItem(hand)))return EnumActionResult.FAIL;
-        for(int i=-2;i<=2;i++)if(world.getBlockState(top.add(shape==RailPath.Shape.EAST_WEST?i:0,0,shape==RailPath.Shape.NORTH_SOUTH?i:0)).getBlock()==Create.SMALL_BOGEY)return EnumActionResult.FAIL;
+        for(int i=-2;i<=2;i++)if(Bogeys.is(world.getBlockState(top.add(shape==RailPath.Shape.EAST_WEST?i:0,0,shape==RailPath.Shape.NORTH_SOUTH?i:0))))return EnumActionResult.FAIL;
         var facing=shape==RailPath.Shape.EAST_WEST?EnumFacing.EAST:EnumFacing.SOUTH;
         if(!world.setBlockState(top,Create.SMALL_BOGEY.getDefaultState().withProperty(RailwayBlock.FACING,facing),3))return EnumActionResult.FAIL;
         if(!player.capabilities.isCreativeMode)player.getHeldItem(hand).shrink(1);

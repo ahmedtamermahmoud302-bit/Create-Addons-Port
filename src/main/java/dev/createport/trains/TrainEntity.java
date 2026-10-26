@@ -27,6 +27,14 @@ public final class TrainEntity extends Entity {
     private static final DataParameter<Integer> SEAT_INDEX=EntityDataManager.createKey(TrainEntity.class,DataSerializers.VARINT);
     private static final DataParameter<Integer> CONTROL_INDEX=EntityDataManager.createKey(TrainEntity.class,DataSerializers.VARINT);
     private static final DataParameter<Boolean> WORLD_BUILT=EntityDataManager.createKey(TrainEntity.class,DataSerializers.BOOLEAN);
+    private static final DataParameter<Integer> DRIVER=EntityDataManager.createKey(TrainEntity.class,DataSerializers.VARINT);
+    private static final DataParameter<Float> THROTTLE=EntityDataManager.createKey(TrainEntity.class,DataSerializers.FLOAT);
+    private static final DataParameter<Integer> PROMPT=EntityDataManager.createKey(TrainEntity.class,DataSerializers.VARINT);
+    private static final DataParameter<String> STATION_NAME=EntityDataManager.createKey(TrainEntity.class,DataSerializers.STRING);
+    private static final DataParameter<Float> DISTANCE=EntityDataManager.createKey(TrainEntity.class,DataSerializers.FLOAT);
+    private static final DataParameter<Float> APPROACH_TOTAL=EntityDataManager.createKey(TrainEntity.class,DataSerializers.FLOAT);
+    public int portalDelay;
+    private java.util.UUID driverId;private BlockPos dockedStation;private TrainStationTile approachStation;private int approachSign=1,steering,promptTicks;private double approachTotal;
     private Cursor cursor;
     private java.util.UUID curveId;private double curveDistance;private int curveForward=1;
     private double speed,cruise;
@@ -36,19 +44,19 @@ public final class TrainEntity extends Entity {
     private float targetYaw,targetPitch;
     private int interpolation;
     public TrainEntity(World world) { super(world);setSize(1.8f,1.7f);noClip=false; }
-    @Override protected void entityInit() { dataManager.register(SEAT_INDEX,-1);dataManager.register(CONTROL_INDEX,-1);dataManager.register(FRONT_YAW,0f);dataManager.register(REAR_YAW,0f);dataManager.register(SPEED,0f);dataManager.register(WHEELS,0f);dataManager.register(STRUCTURE,new NBTTagCompound());dataManager.register(WORLD_BUILT,false); }
-    @Override public void onAddedToWorld() {
+    @Override protected void entityInit() { dataManager.register(DRIVER,-1);dataManager.register(THROTTLE,1f);dataManager.register(PROMPT,0);dataManager.register(STATION_NAME,"");dataManager.register(DISTANCE,0f);dataManager.register(APPROACH_TOTAL,0f);dataManager.register(SEAT_INDEX,-1);dataManager.register(CONTROL_INDEX,-1);dataManager.register(FRONT_YAW,0f);dataManager.register(REAR_YAW,0f);dataManager.register(SPEED,0f);dataManager.register(WHEELS,0f);dataManager.register(STRUCTURE,new NBTTagCompound());dataManager.register(WORLD_BUILT,false); }
+    @Override public synchronized void onAddedToWorld() {
         super.onAddedToWorld();
         if (!world.isRemote && ticket==null) {
             ForgeChunkManager.Ticket requested=ForgeChunkManager.requestTicket(Create.instance,world,ForgeChunkManager.Type.ENTITY);
             if (requested!=null) { requested.bindEntity(this);acceptTicket(requested); }
         }
     }
-    public void acceptTicket(ForgeChunkManager.Ticket restored) {
+    public synchronized void acceptTicket(ForgeChunkManager.Ticket restored) {
         if (ticket!=null && ticket!=restored) ForgeChunkManager.releaseTicket(ticket);
         ticket=restored;updateChunks();
     }
-    private void updateChunks() {
+    private synchronized void updateChunks() {
         if (ticket==null) return;
         int chunkX=MathHelper.floor(posX)>>4,chunkZ=MathHelper.floor(posZ)>>4;
         Set<ChunkPos> wanted=new HashSet<>();
@@ -56,7 +64,7 @@ public final class TrainEntity extends Entity {
         for (ChunkPos chunk:new HashSet<>(ticket.getChunkList())) if (!wanted.contains(chunk)) ForgeChunkManager.unforceChunk(ticket,chunk);
         for (ChunkPos chunk:wanted) if (!ticket.getChunkList().contains(chunk)) ForgeChunkManager.forceChunk(ticket,chunk);
     }
-    @Override public void setDead() {
+    @Override public synchronized void setDead() {
         if (ticket!=null) { ForgeChunkManager.releaseTicket(ticket);ticket=null; }
         super.setDead();
     }
@@ -77,7 +85,17 @@ public final class TrainEntity extends Entity {
         }
         setSize(width,height);
     }
-    public boolean belongsTo(BlockPos station){return stationData.hasKey("Station") && stationData.getLong("Station")==station.toLong();}
+    private java.util.List<TrainStructure.Part> collisionParts;private java.util.List<AxisAlignedBB> collisionCache=java.util.List.of();
+    public java.util.List<AxisAlignedBB> localCollisions(){
+        var parts=structure();if(parts!=collisionParts){collisionParts=parts;var access=new CarriageBlockAccess(parts);var boxes=new java.util.ArrayList<AxisAlignedBB>();
+            for(var p:parts){var local=new BlockPos(p.x(),p.y(),p.z());var box=p.state().getCollisionBoundingBox(access,local);if(box!=null)boxes.add(box.offset(p.x()-.5,.85+p.y(),p.z()-.5));}collisionCache=java.util.List.copyOf(boxes);
+        }return collisionCache;
+    }
+    public AxisAlignedBB visualBounds(){
+        AxisAlignedBB result=null;for(var local:localCollisions()){var b=TrainCollisions.box(PlatformGeometry.bounds(TrainCollisions.box(local),posX,posY,posZ,rotationYaw));result=result==null?b:result.union(b);}
+        return (result==null?getEntityBoundingBox():result).grow(2);
+    }
+    public boolean belongsTo(BlockPos station){return stationData.hasKey("Station")&&stationData.getInteger("Dimension")==world.provider.getDimension()&&stationData.getLong("Station")==station.toLong();}
     public boolean worldBuilt(){return dataManager.get(WORLD_BUILT);}
     public NBTTagCompound stationAssembly(){return stationData.copy();}
     public boolean onCurve(){return curveId!=null;}
@@ -88,8 +106,25 @@ public final class TrainEntity extends Entity {
         if(dataManager.get(SEAT_INDEX)>=0)return null;
         for(var p:parts)if(p.state().getBlock()==Create.TRAIN_CONTROLS)return p;return null;
     }
-    public boolean controlsActive(){return !worldBuilt()||dataManager.get(CONTROL_INDEX)>=0;}
-    public float speed() { return dataManager.get(SPEED); }
+    public boolean controlsActive(){return dataManager.get(DRIVER)>=0;}
+    public int driverEntityId(){return dataManager.get(DRIVER);}
+    public EntityPlayer driver(){return driverId==null?null:world.getPlayerEntityByUUID(driverId);}
+    public float throttle(){return dataManager.get(THROTTLE);}
+    public int prompt(){return dataManager.get(PROMPT);}
+    public String stationName(){return dataManager.get(STATION_NAME);}
+    public float stationDistance(){return dataManager.get(DISTANCE);}
+    public float approachTotal(){return dataManager.get(APPROACH_TOTAL);}
+    public boolean dockedAt(BlockPos station){return dockedStation!=null&&dockedStation.equals(station);}
+    public void dock(TrainStationTile station){dockedStation=station.getPos();dataManager.set(STATION_NAME,station.stationName);dataManager.set(PROMPT,3);}
+    public int controlIndex(){return dataManager.get(CONTROL_INDEX);}
+    public void clearDock(){dockedStation=null;approachStation=null;dataManager.set(PROMPT,0);}
+    public boolean routeFits(){var p=pose();return p.supported&&!bodyObstructed(p);}
+    public boolean driverInReach(EntityPlayer player){var part=controller();if(part==null)return !worldBuilt()&&player.getRidingEntity()==this;var p=toWorld(new Vec3d(part.x(),1.35+part.y(),part.z()));return p.squareDistanceTo(player.getPositionVector())<=64;}
+    public void stopControlling(){driverId=null;dataManager.set(DRIVER,-1);dataManager.set(CONTROL_INDEX,-1);input=0;brake=false;approachStation=null;dataManager.set(PROMPT,0);}
+    public void startControlling(EntityPlayer player,int index){driverId=player.getUniqueID();dataManager.set(DRIVER,player.getEntityId());dataManager.set(CONTROL_INDEX,index);lastInput=ticksExisted;}
+    public Vec3d toLocal(Vec3d p){var q=PlatformGeometry.local(p.x,p.z,posX,posZ,rotationYaw);return new Vec3d(q.x(),p.y-posY,q.z());}
+    public Vec3d toWorld(Vec3d p){var q=PlatformGeometry.world(p.x,p.z,posX,posZ,rotationYaw);return new Vec3d(q.x(),posY+p.y,q.z());}
+    public float speed() { return world.isRemote?dataManager.get(SPEED):(float)speed; }
     public float wheels() { return dataManager.get(WHEELS); }
     private RailPath.Shape track(Cell cell) {
         BlockPos p=new BlockPos(cell.x(),cell.y(),cell.z());
@@ -97,8 +132,9 @@ public final class TrainEntity extends Entity {
         return TrainTrackBlock.pathShape(world.getBlockState(p));
     }
     public void place(BlockPos pos,int forward) {
-        cursor=new Cursor(new Cell(pos.getX(),pos.getY(),pos.getZ()),.5,forward);align();
+        curveId=null;curveDistance=0;curveForward=1;cursor=new Cursor(new Cell(pos.getX(),pos.getY(),pos.getZ()),.5,forward);align();
     }
+    public void control(int input,boolean brake,int steering,float throttle){this.steering=steering;dataManager.set(THROTTLE,Math.max(1/18f,Math.min(1,throttle)));control(input,brake);}
     public void control(int input,boolean brake) { var controls=controller();if(worldBuilt() && controls!=null){var face=controls.state().getValue(RailwayBlock.FACING);if(face.getAxis()==EnumFacing.Axis.Z)input*=-face.getZOffset();} this.input=input;this.brake=brake;lastInput=ticksExisted;cruise=0; }
     public void cruise(double value) { cruise=Math.max(-1,Math.min(1,value));input=0;lastInput=-100; }
     private TrackCurve.V routePosition(){
@@ -115,7 +151,7 @@ public final class TrainEntity extends Entity {
     private record Pose(TrackCurve.V position,TrackCurve.V tangent,TrackCurve.V frontTangent,boolean supported){}
     private Pose pose(){
         var p=routePosition();var tangent=routeTangent();double spacing=0;
-        if(worldBuilt())for(var part:structure())if(part.state().getBlock()==Create.SMALL_BOGEY)spacing=Math.max(spacing,part.z());
+        if(worldBuilt())for(var part:structure())if(Bogeys.is(part.state()))spacing=Math.max(spacing,part.z());
         if(spacing<.01)return new Pose(p,tangent,tangent,true);
         var old=routeState();double lo=spacing,hi=Math.min(64,spacing*1.8);TrackCurve.V front=tangent;boolean supported=false;
         // The body's bogey spacing is a chord, while the rail cursor advances by arc length.
@@ -147,7 +183,7 @@ public final class TrainEntity extends Entity {
         for(var part:structure()){
             double x=pose.position.x()+cos*part.x()-sin*part.z(),z=pose.position.z()+sin*part.x()+cos*part.z();
             double bottom=pose.position.y()+1+part.y();
-            if(part.state().getBlock()==Create.SMALL_BOGEY)bottom+=.4375;
+            if(Bogeys.is(part.state()))bottom+=.4375;
             // Use each carried block's actual world footprint, not the carriage's large selection box.
             double half=(Math.abs(cos)+Math.abs(sin))*.48;
             if(!world.getCollisionBoxes(this,new AxisAlignedBB(x-half,bottom+.01,z-half,x+half,pose.position.y()+2+part.y()-.01,z+half)).isEmpty())return true;
@@ -179,6 +215,7 @@ public final class TrainEntity extends Entity {
         return new RouteMove(true,moved*sign);
     }
     @Override public void onUpdate() {
+        if(isDead)return;
         super.onUpdate();prevPosX=posX;prevPosY=posY;prevPosZ=posZ;prevRotationYaw=rotationYaw;prevRotationPitch=rotationPitch;
         if (world.isRemote) {
             if (interpolation>0) {
@@ -186,8 +223,9 @@ public final class TrainEntity extends Entity {
                 rotationYaw+=MathHelper.wrapDegrees(targetYaw-rotationYaw)/interpolation;
                 rotationPitch+=(targetPitch-rotationPitch)/interpolation;interpolation--;
             }
-            return;
+            TrainCollisions.carry(this,prevPosX,prevPosY,prevPosZ,prevRotationYaw);return;
         }
+        if(portalDelay>0)portalDelay--;
         if (cursor==null) {
             BlockPos p=new BlockPos(posX,posY,posZ);
             if (!(world.getBlockState(p).getBlock() instanceof TrainTrackBlock)) p=p.down();
@@ -195,15 +233,18 @@ public final class TrainEntity extends Entity {
             place(p,1);
         }
         if (curveId==null && track(cursor.cell())==null || curveId!=null && CurveGraphData.get(world).node(world,curveId)==null) { stop();return; }
-        boolean driven=getControllingPassenger() instanceof EntityPlayer;
-        boolean recent=driven && ticksExisted-lastInput<=10;
-        speed=TrainMotion.approach(speed,recent ? input:cruise,recent ? brake:driven);
+        var driver=driver();if(driverId!=null&&(driver==null||driver.isSpectator()||!driverInReach(driver)||ticksExisted-lastInput>40))stopControlling();
+        boolean driven=driver()!=null||!worldBuilt()&&getControllingPassenger() instanceof EntityPlayer;
+        boolean recent=driven&&ticksExisted-lastInput<=10;
+        boolean approaching=updateStationApproach(recent);
+        if(!approaching)speed=TrainMotion.approach(speed,recent?input*throttle():cruise,recent&&brake,onCurve()?TrainMotion.TURN_SPEED:TrainMotion.MAX_SPEED);
         var old=routeState();RouteMove next=travel(speed);var pose=pose();
         AxisAlignedBB future=getEntityBoundingBox().offset(pose.position.x()-posX,pose.position.y()+.15-posY,pose.position.z()-posZ);
+        if((!pose.supported||next.blocked)&&Math.abs(speed)>1e-6&&tryPortal())return;
         boolean occupied=!world.getEntitiesWithinAABB(TrainEntity.class,future.grow(.05),e -> e!=this && !e.isDead).isEmpty();
         if(!pose.supported || occupied || bodyObstructed(pose)){restoreRoute(old);stop();return;}
-        align(pose);updateChunks();
-        dataManager.set(WHEELS,(float)((wheels()+TrainMotion.wheelAngle(next.distance(),TrainMotion.WHEEL_RADIUS))%360));
+        align(pose);updateChunks();finishStationApproach();TrainImpacts.collide(this,prevPosX,prevPosY,prevPosZ,prevRotationYaw);TrainCollisions.carry(this,prevPosX,prevPosY,prevPosZ,prevRotationYaw);
+        dataManager.set(WHEELS,(float)((wheels()+TrainMotion.wheelAngle(next.distance(),TrainMotion.WHEEL_RADIUS))%9000));
         if (next.blocked()) { speed=0;cruise=0; }
         dataManager.set(SPEED,(float)speed);
         motionX=posX-prevPosX;motionY=posY-prevPosY;motionZ=posZ-prevPosZ;
@@ -218,26 +259,60 @@ public final class TrainEntity extends Entity {
         Vec3d eye=player.getPositionEyes(1).subtract(posX,posY,posZ),look=player.getLookVec().scale(6);
         Vec3d from=new Vec3d(cos*eye.x+sin*eye.z,eye.y,-sin*eye.x+cos*eye.z);
         Vec3d to=from.add(cos*look.x+sin*look.z,look.y,-sin*look.x+cos*look.z);
-        var parts=structure();int selected=-1;double nearest=from.distanceTo(to)+1e-6;
+        var parts=structure();int selected=-1;RayTraceResult selectedHit=null;double nearest=from.distanceTo(to)+1e-6;
         var worldHit=world.rayTraceBlocks(player.getPositionEyes(1),player.getPositionEyes(1).add(look),false,true,false);
         if(worldHit!=null)nearest=Math.min(nearest,player.getPositionEyes(1).distanceTo(worldHit.hitVec));
         for(int i=0;i<parts.size();i++){
-            var part=parts.get(i);double bottom=.85+part.y();if(part.state().getBlock()==Create.SMALL_BOGEY)bottom+=.4375;
+            var part=parts.get(i);double bottom=.85+part.y();if(Bogeys.is(part.state()))bottom+=.4375;
             var box=new AxisAlignedBB(part.x()-.5,bottom,part.z()-.5,part.x()+.5,(part.state().getBlock() instanceof SeatBlock?1.35:1.85)+part.y(),part.z()+.5);
             var intersect=box.calculateIntercept(from,to);double distance=box.contains(from)?0:intersect==null?Double.POSITIVE_INFINITY:from.distanceTo(intersect.hitVec);
-            if(distance<nearest){nearest=distance;selected=i;}
+            if(distance<nearest){nearest=distance;selected=i;selectedHit=intersect;}
         }
         if(selected>=0 && (parts.get(selected).state().getBlock()==Create.TRAIN_CONTROLS || parts.get(selected).state().getBlock() instanceof SeatBlock)){
             if(!world.isRemote&&!player.isSpectator()&&!player.isSneaking()){
                 boolean seat=parts.get(selected).state().getBlock() instanceof SeatBlock;
-                if(!seat&&player.getRidingEntity()==this){dataManager.set(CONTROL_INDEX,selected);return EnumActionResult.SUCCESS;}
-                if(getPassengers().isEmpty()){
-                    dataManager.set(SEAT_INDEX,seat?selected:-1);dataManager.set(CONTROL_INDEX,seat?-1:selected);player.startRiding(this);
-                    if(seat)player.sendStatusMessage(new net.minecraft.util.text.TextComponentString("Use nearby Train Controls to start driving."),true);
-                }
+                if(!seat){if(driver()!=null&&driver()!=player)return EnumActionResult.FAIL;if(driver()==player)stopControlling();else startControlling(player,selected);return EnumActionResult.SUCCESS;}
+                if(getPassengers().isEmpty()){dataManager.set(SEAT_INDEX,selected);player.startRiding(this);player.sendStatusMessage(new net.minecraft.util.text.TextComponentString("Use nearby Train Controls to start driving."),true);}
             }return EnumActionResult.SUCCESS;
-        }return EnumActionResult.PASS;
+        }
+        if(selected>=0&&selectedHit!=null)return TrainBuilding.place(this,player,parts.get(selected),selectedHit.sideHit,selectedHit.hitVec);
+        return EnumActionResult.PASS;
     }
+    public void linkCarriedBlocks(BlockPos a,BlockPos b){var bonds=stationData.getTagList("Bonds",10);var n=new NBTTagCompound();n.setLong("A",a.toLong());n.setLong("B",b.toLong());bonds.appendTag(n);stationData.setTag("Bonds",bonds);}
+    private boolean tryPortal(){
+        var old=routeState();BlockPos end=null;EnumFacing direction=null;int sign=speed<0?-1:1;
+        try{double spacing=0;if(sign>0)for(var p:structure())if(Bogeys.is(p.state()))spacing=Math.max(spacing,p.z());var move=travel(sign*(spacing+.1));
+            if(move.blocked&&curveId==null){var tangent=routeTangent().scale(sign);end=new BlockPos(cursor.cell().x(),cursor.cell().y(),cursor.cell().z());direction=EnumFacing.getFacingFromVector((float)tangent.x(),0,(float)tangent.z());}
+        }finally{restoreRoute(old);}
+        return end!=null&&TrainPortalTravel.transfer(this,end,direction);
+    }
+    private record Stop(TrainStationTile station,double distance){}
+    private Stop findStation(int sign,TrainStationTile only,double maximum){
+        var stations=new java.util.ArrayList<TrainStationTile>();for(var tile:world.loadedTileEntityList)if(tile instanceof TrainStationTile station&&station.target!=null&&!station.assembling&&(only==null||only==station))stations.add(station);
+        var old=routeState();double distance=0;try{
+            while(distance<maximum){var a=routePosition();var move=travel(sign*Math.min(1,maximum-distance));var b=routePosition();var delta=b.sub(a);double square=delta.dot(delta);
+                for(var station:stations){var target=station.target.offset(station.direction);var point=new TrackCurve.V(target.getX()+.5,target.getY(),target.getZ()+.5);double t=square<1e-10?0:Math.max(0,Math.min(1,point.sub(a).dot(delta)/square));
+                    if(a.add(delta.scale(t)).sub(point).length()>.035)continue;double d=distance+Math.abs(move.distance)*t;
+                    if(only==null&&d<StationApproach.minimumSearchDistance(speed)+.05)continue;
+                    var occupying=station.train();if(occupying!=null&&occupying!=this)continue;return new Stop(station,d);
+                }
+                distance+=Math.abs(move.distance);if(move.blocked||Math.abs(move.distance)<1e-6)break;
+            }
+        }finally{restoreRoute(old);}return null;
+    }
+    private boolean updateStationApproach(boolean recent){
+        if(!recent){approachStation=null;if(promptTicks--<=0)dataManager.set(PROMPT,0);return false;}
+        if(dockedStation!=null){if(brake){speed=0;dataManager.set(PROMPT,3);return true;}if(input!=0){dockedStation=null;dataManager.set(PROMPT,4);promptTicks=40;}}
+        if(!brake)approachStation=null;
+        if(approachStation!=null){var stop=findStation(approachSign,approachStation,192);if(stop==null){approachStation=null;dataManager.set(PROMPT,0);return false;}
+            dataManager.set(DISTANCE,(float)stop.distance);speed=approachSign*StationApproach.next(Math.max(0,speed*approachSign),stop.distance,Math.min(onCurve()?TrainMotion.TURN_SPEED:TrainMotion.MAX_SPEED,TrainMotion.MAX_SPEED*throttle()),TrainMotion.ACCELERATION);dataManager.set(PROMPT,2);return true;
+        }
+        if(ticksExisted%5==0||brake){int sign=input!=0?Integer.signum(input):speed<0?-1:1;var stop=findStation(sign,null,StationApproach.maximumSearchDistance(speed));
+            if(stop!=null){dataManager.set(STATION_NAME,stop.station.stationName);dataManager.set(DISTANCE,(float)stop.distance);dataManager.set(PROMPT,1);if(brake){approachStation=stop.station;approachSign=sign;approachTotal=stop.distance;dataManager.set(APPROACH_TOTAL,(float)approachTotal);return updateStationApproach(true);}}
+            else if(promptTicks--<=0)dataManager.set(PROMPT,0);
+        }return false;
+    }
+    private void finishStationApproach(){if(approachStation==null)return;var stop=findStation(approachSign,approachStation,192);if(stop!=null&&stop.distance<1e-5){speed=0;dock(approachStation);approachStation.sync();approachStation=null;}}
     @Override public boolean processInitialInteract(EntityPlayer player,EnumHand hand) {
         if(worldBuilt() || player.isSneaking())return false;
         if(!world.isRemote && getPassengers().isEmpty())player.startRiding(this);return true;
@@ -271,6 +346,8 @@ public final class TrainEntity extends Entity {
         }
         if(curveId!=null){nbt.setUniqueId("CurveId",curveId);nbt.setDouble("CurveDistance",curveDistance);nbt.setInteger("CurveForward",curveForward);}
         nbt.setInteger("SeatIndex",dataManager.get(SEAT_INDEX));nbt.setInteger("ControlIndex",dataManager.get(CONTROL_INDEX));
+        nbt.setInteger("PortalDelay",portalDelay);
+        if(dockedStation!=null)nbt.setLong("DockedStation",dockedStation.toLong());nbt.setFloat("Throttle",throttle());
         nbt.setTag("StationAssembly",stationData.copy());nbt.setBoolean("WorldBuilt",worldBuilt());
         nbt.setTag("Structure",dataManager.get(STRUCTURE).copy());
         nbt.setDouble("TrainSpeed",speed);nbt.setDouble("Cruise",cruise);nbt.setFloat("WheelAngle",wheels());
@@ -280,11 +357,13 @@ public final class TrainEntity extends Entity {
                 finiteClamp(nbt.getDouble("Progress"),0,1),nbt.getInteger("Forward")==-1 ? -1:1);
         curveId=nbt.hasUniqueId("CurveId")?nbt.getUniqueId("CurveId"):null;curveDistance=Math.max(0,nbt.getDouble("CurveDistance"));curveForward=nbt.getInteger("CurveForward")==-1?-1:1;
         dataManager.set(SEAT_INDEX,nbt.hasKey("SeatIndex")?nbt.getInteger("SeatIndex"):-1);dataManager.set(CONTROL_INDEX,nbt.hasKey("ControlIndex")?nbt.getInteger("ControlIndex"):-1);
+        portalDelay=Math.max(0,nbt.getInteger("PortalDelay"));
+        dockedStation=nbt.hasKey("DockedStation")?BlockPos.fromLong(nbt.getLong("DockedStation")):null;dataManager.set(THROTTLE,nbt.hasKey("Throttle")?(float)finiteClamp(nbt.getFloat("Throttle"),1/18d,1):1f);driverId=null;dataManager.set(DRIVER,-1);
         stationData=nbt.getCompoundTag("StationAssembly").copy();dataManager.set(WORLD_BUILT,nbt.getBoolean("WorldBuilt"));
         setStructure(TrainStructure.read(nbt.getCompoundTag("Structure")));
         speed=finiteClamp(nbt.getDouble("TrainSpeed"),-TrainMotion.MAX_SPEED,TrainMotion.MAX_SPEED);
         cruise=finiteClamp(nbt.getDouble("Cruise"),-1,1);dataManager.set(SPEED,(float)speed);
-        dataManager.set(WHEELS,(float)finiteClamp(nbt.getFloat("WheelAngle"),-360,360));
+        dataManager.set(WHEELS,(float)finiteClamp(nbt.getFloat("WheelAngle"),-9000,9000));
     }
     private static double finiteClamp(double value,double min,double max) { return Double.isFinite(value) ? Math.max(min,Math.min(max,value)):0; }
 }

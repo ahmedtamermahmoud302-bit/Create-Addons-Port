@@ -7,6 +7,7 @@ import net.minecraft.network.play.server.SPacketUpdateTileEntity;
 public final class TrackRenderTile extends TileEntity {
     public NBTTagList connections=new NBTTagList();
     public java.util.List<TrackCurve> renderedCurves=java.util.List.of();
+    @Override public double getMaxRenderDistanceSquared(){return 512*512;}
     @Override public AxisAlignedBB getRenderBoundingBox(){return new AxisAlignedBB(pos).grow(connections.tagCount()>0?130:3);}
     @Override public NBTTagCompound getUpdateTag(){var n=super.getUpdateTag();n.setTag("Connections",CurveGraphData.get(world).connections(pos));return n;}
     @Override public SPacketUpdateTileEntity getUpdatePacket(){return new SPacketUpdateTileEntity(pos,0,getUpdateTag());}

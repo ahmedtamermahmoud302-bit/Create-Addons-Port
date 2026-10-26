@@ -32,5 +32,11 @@ public final class TrainTrackBlock extends BlockRailBase {
     @Override public boolean hasTileEntity(IBlockState state){return true;}
     @Override public net.minecraft.tileentity.TileEntity createTileEntity(net.minecraft.world.World world,IBlockState state){return new TrackRenderTile();}
     @Override public net.minecraft.util.EnumBlockRenderType getRenderType(IBlockState state){return state.getValue(DIAGONAL)!=Diagonal.NONE || state.getValue(SHAPE).isAscending() ? net.minecraft.util.EnumBlockRenderType.INVISIBLE:net.minecraft.util.EnumBlockRenderType.MODEL;}
+    @Override public void addCollisionBoxToList(IBlockState state,net.minecraft.world.World world,net.minecraft.util.math.BlockPos pos,net.minecraft.util.math.AxisAlignedBB query,java.util.List<net.minecraft.util.math.AxisAlignedBB> boxes,net.minecraft.entity.Entity entity,boolean actual){
+        if(entity instanceof TrainEntity)return;
+        var path=RailPath.of(pathShape(state));var a=path.sample(0);var b=path.sample(1);double dx=b.x()-a.x(),dz=b.z()-a.z(),length=Math.hypot(dx,dz);
+        var strip=new PlatformGeometry.Box(-1.125,0,-length/2,1.125,5/16d,length/2);
+        var hit=PlatformGeometry.clip(strip,pos.getX()+.5,pos.getY(),pos.getZ()+.5,-Math.toDegrees(Math.atan2(dx,dz)),TrainCollisions.box(query));if(hit!=null)boxes.add(TrainCollisions.box(hit));
+    }
     @Override public BlockRenderLayer getRenderLayer() { return BlockRenderLayer.CUTOUT; }
 }

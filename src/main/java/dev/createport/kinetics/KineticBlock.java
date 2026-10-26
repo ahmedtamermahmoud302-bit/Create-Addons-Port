@@ -12,7 +12,7 @@ import net.minecraft.util.*;
 import net.minecraft.util.math.*;
 import net.minecraft.world.*;
 
-public final class KineticBlock extends Block {
+public class KineticBlock extends Block {
     public static final PropertyEnum<EnumFacing.Axis> AXIS = PropertyEnum.create("axis", EnumFacing.Axis.class);
     public static final PropertyEnum<EnumFacing> FACING = PropertyEnum.create("facing", EnumFacing.class);
     public final boolean motor;
@@ -26,8 +26,20 @@ public final class KineticBlock extends Block {
     @Override public IBlockState getStateFromMeta(int meta) { return motor ? getDefaultState().withProperty(FACING, EnumFacing.byIndex(meta)).withProperty(AXIS, EnumFacing.byIndex(meta).getAxis()) : getDefaultState().withProperty(AXIS, EnumFacing.Axis.values()[Math.floorMod(meta, 3)]); }
     @Override public int getMetaFromState(IBlockState state) { return motor ? state.getValue(FACING).getIndex() : state.getValue(AXIS).ordinal(); }
     @Override public IBlockState getStateForPlacement(World world, BlockPos pos, EnumFacing facing, float x, float y, float z, int meta, EntityLivingBase placer) {
-        return getDefaultState().withProperty(AXIS, facing.getAxis()).withProperty(FACING, motor ? facing : EnumFacing.UP);
+        EnumFacing preferred=null;boolean conflict=false;
+        for(EnumFacing side:EnumFacing.values()){
+            var adjacent=world.getBlockState(pos.offset(side));if(!(adjacent.getBlock() instanceof KineticBlock block))continue;
+            boolean connects=KineticTopology.hasPort(adjacent,side.getOpposite());if(!connects)continue;
+            if(preferred!=null&&preferred.getAxis()!=side.getAxis()){conflict=true;break;}preferred=side;
+        }
+        if(conflict)preferred=null;
+        var look=placer.getLookVec();EnumFacing looking=EnumFacing.getFacingFromVector((float)look.x,(float)look.y,(float)look.z);
+        EnumFacing direction=motor?(preferred!=null&&!placer.isSneaking()?preferred:placer.isSneaking()?looking:looking.getOpposite()):EnumFacing.UP;
+        EnumFacing.Axis axis=motor?direction.getAxis():preferred!=null?(placer.isSneaking()?facing.getAxis():preferred.getAxis()):looking.getAxis();
+        return getDefaultState().withProperty(AXIS,axis).withProperty(FACING,direction);
     }
+    @Override public void neighborChanged(IBlockState state,World world,BlockPos pos,Block block,BlockPos from){if(!world.isRemote)KineticTile.refreshAround(world,pos);}
+    @Override public void breakBlock(World world,BlockPos pos,IBlockState state){super.breakBlock(world,pos,state);if(!world.isRemote)KineticTile.refreshAround(world,pos);}
     @Override public boolean hasTileEntity(IBlockState state) { return true; }
     @Override public TileEntity createTileEntity(World world, IBlockState state) { return new KineticTile(); }
     @Override public boolean isOpaqueCube(IBlockState state) { return false; }

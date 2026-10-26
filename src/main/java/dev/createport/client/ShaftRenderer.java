@@ -17,6 +17,7 @@ public final class ShaftRenderer extends TileEntitySpecialRenderer<KineticTile> 
         GlStateManager.color(1,1,1,1);GlStateManager.enableRescaleNormal();
         int light=tile.getWorld().getCombinedLight(tile.getPos(),0);
         net.minecraft.client.renderer.OpenGlHelper.setLightmapTextureCoords(net.minecraft.client.renderer.OpenGlHelper.lightmapTexUnit,light&65535,light>>16);
+        if(tile.getWorld().getBlockState(tile.getPos()).getBlock() instanceof dev.createport.kinetics.MechanicalBlock machine){MechanicalRenderer.render(tile,machine,x,y,z,partialTicks);GlStateManager.disableRescaleNormal();return;}
         GlStateManager.pushMatrix();
         GlStateManager.translate(x + .5, y + .5, z + .5);
         int parity = (tile.axis() == EnumFacing.Axis.X ? 0 : tile.getPos().getX())

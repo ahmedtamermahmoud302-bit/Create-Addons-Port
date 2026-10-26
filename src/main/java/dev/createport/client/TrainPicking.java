@@ -2,6 +2,7 @@ package dev.createport.client;
 
 import dev.createport.Create;
 import dev.createport.trains.TrainEntity;
+import dev.createport.trains.Bogeys;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.math.*;
 import net.minecraftforge.client.event.*;
@@ -36,7 +37,7 @@ public final class TrainPicking {
             Vec3d from=new Vec3d(cos*delta.x+sin*delta.z,delta.y,-sin*delta.x+cos*delta.z);
             Vec3d to=new Vec3d(cos*deltaEnd.x+sin*deltaEnd.z,deltaEnd.y,-sin*deltaEnd.x+cos*deltaEnd.z);
             for(var part:train.structure()){
-                double bottom=.85+part.y();if(part.state().getBlock()==Create.SMALL_BOGEY)bottom+=.4375;
+                double bottom=.85+part.y();if(Bogeys.is(part.state()))bottom+=.4375;
                 var box=new AxisAlignedBB(part.x()-.5,bottom,part.z()-.5,part.x()+.5,(part.state().getBlock() instanceof dev.createport.trains.SeatBlock?1.35:1.85)+part.y(),part.z()+.5);
                 var hit=box.calculateIntercept(from,to);if(hit==null)continue;
                 double d=from.distanceTo(hit.hitVec);if(d>=distance)continue;

@@ -20,16 +20,16 @@ public final class TrainStationTile extends TileEntity implements ITickable {
     public void sync(){markDirty();if(world!=null&&!world.isRemote){var state=world.getBlockState(pos);world.notifyBlockUpdate(pos,state,state,2);}}
     public void status(EntityPlayer player,String text){lastError=false;message=text;refresh();sync();if(player!=null)player.sendStatusMessage(new TextComponentString(text),true);}
     public void error(EntityPlayer player,String text){message=text;lastError=true;refresh();sync();if(player!=null)player.sendStatusMessage(new TextComponentString(text),true);}
-    public TrainEntity train(){for(var e:world.loadedEntityList)if(e instanceof TrainEntity train&&!train.isDead&&train.belongsTo(pos))return train;return null;}
+    public TrainEntity train(){for(var e:world.loadedEntityList)if(e instanceof TrainEntity train&&!train.isDead&&(train.dockedAt(pos)||train.belongsTo(pos)&&train.getDistanceSq(pos)<=32*32))return train;return null;}
     public void refresh(){
         var train=train();trainPresent=train!=null;canDisassemble=train!=null&&Math.abs(train.speed())<.0001&&!train.onCurve()&&Math.abs(train.rotationPitch)<.001&&Math.abs(Math.sin(Math.toRadians(train.rotationYaw*2)))<.001;
         if(canDisassemble&&target!=null){var track=new BlockPos(train.posX,train.posY-.15,train.posZ);canDisassemble=track.getY()==target.getY()&&(direction.getAxis()==EnumFacing.Axis.X?track.getZ()==target.getZ():track.getX()==target.getX())&&track.distanceSq(target)<=32*32;}
         bogeyCount=0;assemblyLength=0;if(target==null)return;
         var state=world.getBlockState(target);if(!(state.getBlock() instanceof TrainTrackBlock))return;var shape=TrainTrackBlock.pathShape(state);
-        for(int i=1;i<=48;i++){BlockPos p=target.offset(direction,i);if(!world.isBlockLoaded(p)||!(world.getBlockState(p).getBlock() instanceof TrainTrackBlock)||TrainTrackBlock.pathShape(world.getBlockState(p))!=shape)break;assemblyLength=i;if(world.getBlockState(p.up()).getBlock()==Create.SMALL_BOGEY)bogeyCount++;}
+        for(int i=1;i<=48;i++){BlockPos p=target.offset(direction,i);if(!world.isBlockLoaded(p)||!(world.getBlockState(p).getBlock() instanceof TrainTrackBlock)||TrainTrackBlock.pathShape(world.getBlockState(p))!=shape)break;assemblyLength=i;if(Bogeys.is(world.getBlockState(p.up())))bogeyCount++;}
     }
     public int offset(BlockPos p){if(target==null||p.getY()!=target.getY())return -1;int dx=p.getX()-target.getX(),dz=p.getZ()-target.getZ();if(direction.getAxis()==EnumFacing.Axis.X&&dz!=0||direction.getAxis()==EnumFacing.Axis.Z&&dx!=0)return -1;return dx*direction.getXOffset()+dz*direction.getZOffset()-1;}
-    public boolean validBogeyOffset(int offset){if(offset<0||offset>=assemblyLength)return false;BlockPos p=target.offset(direction,offset+1).up();for(int i=-2;i<=2;i++)if(world.getBlockState(p.offset(direction,i)).getBlock()==Create.SMALL_BOGEY)return false;return true;}
+    public boolean validBogeyOffset(int offset){if(offset<0||offset>=assemblyLength)return false;BlockPos p=target.offset(direction,offset+1).up();for(int i=-2;i<=2;i++)if(Bogeys.is(world.getBlockState(p.offset(direction,i))))return false;return true;}
     @Override public void update(){
         if(world.isRemote){previousFlag=flag;float targetFlag=assembling||trainPresent?1:0;flag+=Math.max(-.1f,Math.min(.1f,targetFlag-flag));return;}
         if((world.getTotalWorldTime()+pos.toLong())%10==0){int oldCount=bogeyCount,oldLength=assemblyLength;boolean oldPresent=trainPresent,oldCanDisassemble=canDisassemble;refresh();if(oldCount!=bogeyCount||oldLength!=assemblyLength||oldPresent!=trainPresent||oldCanDisassemble!=canDisassemble)sync();}

@@ -23,7 +23,7 @@ import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper;
 import net.minecraftforge.fml.common.registry.GameRegistry;
 import net.minecraftforge.fml.relauncher.Side;
 
-@Mod(modid = Create.ID, name = "Create", version = "0.4.0-alpha", acceptedMinecraftVersions = "[1.12.2]")
+@Mod(modid = Create.ID, name = "Create", version = "0.5.0-alpha", acceptedMinecraftVersions = "[1.12.2]")
 @Mod.EventBusSubscriber(modid = Create.ID)
 public class Create {
     public static final String ID = "create";
@@ -31,8 +31,12 @@ public class Create {
     public static KineticBlock SHAFT;
     public static KineticBlock MOTOR;
     public static TrainTrackBlock TRACK;
+    public static dev.createport.kinetics.MechanicalBlock COGWHEEL,LARGE_COGWHEEL,HAND_CRANK,GEARBOX,CLUTCH,GEARSHIFT,CHAIN_DRIVE,ADJUSTABLE_CHAIN_GEARSHIFT,BELT;
+    public static Item VERTICAL_GEARBOX;public static dev.createport.kinetics.BeltConnectorItem BELT_CONNECTOR;
+    public static final java.util.List<dev.createport.kinetics.MechanicalBlock> MACHINES=new java.util.ArrayList<>();
+    private static dev.createport.kinetics.MechanicalBlock machine(String id,dev.createport.kinetics.MechanicalBlock.Kind kind){var block=new dev.createport.kinetics.MechanicalBlock(id,kind);MACHINES.add(block);return block;}
     public static final java.util.List<SeatBlock> SEATS=new java.util.ArrayList<>();
-    public static RailwayBlock RAILWAY_CASING,SMALL_BOGEY,TRAIN_CONTROLS,TRACK_STATION;
+    public static RailwayBlock RAILWAY_CASING,SMALL_BOGEY,LARGE_BOGEY,TRAIN_CONTROLS,TRACK_STATION;
     public static SuperGlueItem SUPER_GLUE;
     public static WrenchItem WRENCH;
     public static GogglesItem GOGGLES;
@@ -63,6 +67,7 @@ public class Create {
         NETWORK.registerMessage(TrackToolPacket.Handler.class,TrackToolPacket.class,5,Side.SERVER);
         proxy.preInit();
     }
+    @Mod.EventHandler public void serverStarting(net.minecraftforge.fml.common.event.FMLServerStartingEvent event){event.registerServerCommand(new PortalTrackCommand());}
     @Mod.EventHandler public void init(FMLInitializationEvent event) { proxy.init(); }
     @SubscribeEvent public static void interact(PlayerInteractEvent.RightClickBlock event) {
         if (WrenchItem.isHolding(event.getEntityPlayer()) || event.getEntityPlayer().isSneaking() || event.getEntityPlayer().isSpectator()
@@ -78,15 +83,19 @@ public class Create {
         SHAFT = new KineticBlock("shaft", false);
         MOTOR = new KineticBlock("creative_motor", true);
         TRACK = new TrainTrackBlock();
-        RAILWAY_CASING=new TrainCasingBlock();SMALL_BOGEY=new RailwayBlock("small_bogey",RailwayBlock.Kind.BOGEY);
+        COGWHEEL=machine("cogwheel",dev.createport.kinetics.MechanicalBlock.Kind.COG);LARGE_COGWHEEL=machine("large_cogwheel",dev.createport.kinetics.MechanicalBlock.Kind.LARGE_COG);HAND_CRANK=machine("hand_crank",dev.createport.kinetics.MechanicalBlock.Kind.CRANK);GEARBOX=machine("gearbox",dev.createport.kinetics.MechanicalBlock.Kind.GEARBOX);CLUTCH=machine("clutch",dev.createport.kinetics.MechanicalBlock.Kind.CLUTCH);GEARSHIFT=machine("gearshift",dev.createport.kinetics.MechanicalBlock.Kind.GEARSHIFT);CHAIN_DRIVE=machine("encased_chain_drive",dev.createport.kinetics.MechanicalBlock.Kind.CHAIN);ADJUSTABLE_CHAIN_GEARSHIFT=machine("adjustable_chain_gearshift",dev.createport.kinetics.MechanicalBlock.Kind.ADJUSTABLE_CHAIN);BELT=machine("belt",dev.createport.kinetics.MechanicalBlock.Kind.BELT);
+        for(var block:MACHINES)event.getRegistry().register(block);
+        RAILWAY_CASING=new TrainCasingBlock();SMALL_BOGEY=new RailwayBlock("small_bogey",RailwayBlock.Kind.BOGEY);LARGE_BOGEY=new RailwayBlock("large_bogey",RailwayBlock.Kind.BOGEY);
         TRAIN_CONTROLS=new ControlsBlock();TRACK_STATION=new RailwayBlock("track_station",RailwayBlock.Kind.STATION);
-        event.getRegistry().registerAll(SHAFT,MOTOR,TRACK,RAILWAY_CASING,SMALL_BOGEY,TRAIN_CONTROLS,TRACK_STATION);
+        event.getRegistry().registerAll(SHAFT,MOTOR,TRACK,RAILWAY_CASING,SMALL_BOGEY,LARGE_BOGEY,TRAIN_CONTROLS,TRACK_STATION);
         for(var color:net.minecraft.item.EnumDyeColor.values()){var seat=new SeatBlock(color==net.minecraft.item.EnumDyeColor.SILVER?"light_gray":color.getName());SEATS.add(seat);event.getRegistry().register(seat);}
     }
     @SubscribeEvent public static void migrateItems(RegistryEvent.MissingMappings<Item> event){
         for(var mapping:event.getMappings())if(mapping.key.toString().equals("create:train_carriage"))mapping.remap(Item.getItemFromBlock(RAILWAY_CASING));
     }
     @SubscribeEvent public static void items(RegistryEvent.Register<Item> event) {
+        for(var block:MACHINES)if(block!=BELT)event.getRegistry().register(new ItemBlock(block).setRegistryName(block.getRegistryName()));
+        VERTICAL_GEARBOX=new dev.createport.kinetics.VerticalGearboxItem();event.getRegistry().register(VERTICAL_GEARBOX);BELT_CONNECTOR=new dev.createport.kinetics.BeltConnectorItem();event.getRegistry().register(BELT_CONNECTOR);
         for (Block block : new Block[] { SHAFT, MOTOR })
             event.getRegistry().register(new ItemBlock(block).setRegistryName(block.getRegistryName()));
         event.getRegistry().registerAll(new TrackItem(),new TrainCasingItem(),new StationItem(),new ItemBlock(TRAIN_CONTROLS).setRegistryName(TRAIN_CONTROLS.getRegistryName()));

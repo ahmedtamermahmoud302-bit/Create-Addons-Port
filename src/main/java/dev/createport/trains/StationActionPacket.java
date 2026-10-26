@@ -10,7 +10,7 @@ public final class StationActionPacket implements IMessage {
     @Override public void fromBytes(ByteBuf buffer){pos=BlockPos.fromLong(buffer.readLong());action=buffer.readUnsignedByte();name=ByteBufUtils.readUTF8String(buffer);}
     public static final class Handler implements IMessageHandler<StationActionPacket,IMessage>{
         @Override public IMessage onMessage(StationActionPacket packet,MessageContext context){var player=context.getServerHandler().player;player.getServerWorld().addScheduledTask(()->{
-            if(packet.action>2 || packet.name.length()>32 || player.isSpectator() || !player.capabilities.allowEdit || player.getDistanceSq(packet.pos)>64 || !player.world.isBlockLoaded(packet.pos) || !player.world.isBlockModifiable(player,packet.pos))return;
+            if(packet.action>12 || packet.name.length()>35 || player.isSpectator() || !player.capabilities.allowEdit || player.getDistanceSq(packet.pos)>64 || !player.world.isBlockLoaded(packet.pos) || !player.world.isBlockModifiable(player,packet.pos))return;
             if(player.world.getTileEntity(packet.pos) instanceof TrainStationTile station)station.action(player,packet.action,packet.name);
         });return null;}
     }

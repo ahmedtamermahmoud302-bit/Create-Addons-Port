@@ -23,7 +23,7 @@ public final class WrenchItem extends Item {
         return player.getHeldItemMainhand().getItem()==Create.WRENCH || player.getHeldItemOffhand().getItem()==Create.WRENCH;
     }
     private static boolean pickupAllowed(Block block) {
-        if(block instanceof KineticBlock || block instanceof TrainTrackBlock || block instanceof dev.createport.trains.RailwayBlock)return true;
+        if(block instanceof dev.createport.trains.SeatBlock || block instanceof KineticBlock || block instanceof TrainTrackBlock || block instanceof dev.createport.trains.RailwayBlock)return true;
         // The 1.12 equivalents of available vanilla entries in Create 6.0.8's wrench_pickup tag.
         return Set.of(Blocks.REDSTONE_WIRE,Blocks.REDSTONE_TORCH,Blocks.UNLIT_REDSTONE_TORCH,
                 Blocks.POWERED_REPEATER,Blocks.UNPOWERED_REPEATER,Blocks.LEVER,Blocks.REDSTONE_LAMP,Blocks.LIT_REDSTONE_LAMP,

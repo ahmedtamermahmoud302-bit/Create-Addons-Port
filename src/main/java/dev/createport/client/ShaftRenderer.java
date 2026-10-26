@@ -12,6 +12,11 @@ import net.minecraft.client.renderer.block.model.ModelResourceLocation;
 
 public final class ShaftRenderer extends TileEntitySpecialRenderer<KineticTile> {
     @Override public void render(KineticTile tile, double x, double y, double z, float partialTicks, int destroyStage, float alpha) {
+        GlStateManager.setActiveTexture(net.minecraft.client.renderer.OpenGlHelper.defaultTexUnit);
+        bindTexture(net.minecraft.client.renderer.texture.TextureMap.LOCATION_BLOCKS_TEXTURE);
+        GlStateManager.color(1,1,1,1);GlStateManager.enableRescaleNormal();
+        int light=tile.getWorld().getCombinedLight(tile.getPos(),0);
+        net.minecraft.client.renderer.OpenGlHelper.setLightmapTextureCoords(net.minecraft.client.renderer.OpenGlHelper.lightmapTexUnit,light&65535,light>>16);
         GlStateManager.pushMatrix();
         GlStateManager.translate(x + .5, y + .5, z + .5);
         int parity = (tile.axis() == EnumFacing.Axis.X ? 0 : tile.getPos().getX())
@@ -36,6 +41,6 @@ public final class ShaftRenderer extends TileEntitySpecialRenderer<KineticTile> 
         GlStateManager.rotate(angle, 0, 1, 0);
         Minecraft.getMinecraft().getRenderItem().renderItem(new ItemStack(Create.SHAFT), ItemCameraTransforms.TransformType.NONE);
         }
-        GlStateManager.popMatrix();
+        GlStateManager.popMatrix();GlStateManager.color(1,1,1,1);GlStateManager.disableRescaleNormal();
     }
 }

@@ -37,11 +37,34 @@ public final class TrackItem extends ItemBlock {
         TrackCurve.V d=CurveTrackEntity.vector(n,"Axis"),e=axis(state);
         if(Math.abs(d.y())>1e-6 || Math.abs(e.y())>1e-6)throw new IllegalArgumentException("Slope transition placement is not available yet");
         Vec3d look=player.getLookVec();if(e.dot(new TrackCurve.V(look.x,look.y,look.z))>0)e=e.scale(-1);
-        var plan=TrackPlacement.connect(new TrackCurve.V(first.getX()+.5,first.getY(),first.getZ()+.5),new TrackCurve.V(target.getX()+.5,target.getY(),target.getZ()+.5),d,e,player.isSprinting());
+        var plan=TrackPlacement.connect(new TrackCurve.V(first.getX()+.5,first.getY(),first.getZ()+.5),new TrackCurve.V(target.getX()+.5,target.getY(),target.getZ()+.5),d,e,stack.getTagCompound().getBoolean("ExtendCurve"));
         if(first.distanceSq(target)>128*128)throw new IllegalArgumentException("Track connection out of range");
         return new Placement(first,target,firstState,state,plan);
     }
     public static TrackCurve preview(World world,ItemStack stack,BlockPos target,EntityPlayer player){return plan(world,stack,target,player).plan.curve();}
+    public record Checked(Placement placement,int cost){}
+    public static Checked check(World world,ItemStack stack,BlockPos target,EntityPlayer player){
+        if(stack.getTagCompound().getCompoundTag("ConnectingFrom").getInteger("Dimension")!=world.provider.getDimension())throw new IllegalArgumentException("Choose endpoints in the same dimension");
+        Placement placement=plan(world,stack,target,player);TrackCurve curve=placement.plan.curve();
+        var blocks=placement.blocks();int blockCost=0;
+        for(var entry:blocks.entrySet()){
+            BlockPos p=entry.getKey();if(!world.isBlockLoaded(p) || !world.isBlockModifiable(player,p) || !player.canPlayerEdit(p,EnumFacing.UP,stack))throw new IllegalArgumentException("Track would enter protected or unloaded space");
+            var existing=world.getBlockState(p);if(existing.equals(entry.getValue()))continue;
+            if(!existing.getBlock().isReplaceable(world,p))throw new IllegalArgumentException("Track path is obstructed");blockCost++;
+        }
+        if(curve!=null){
+            for(int i=0;i<=curve.segments();i++){
+                TrackCurve.V p=curve.point(curve.renderT(i));BlockPos cell=new BlockPos(p.x(),p.y()+1e-5,p.z());
+                if(!world.isBlockLoaded(cell) || !world.isBlockModifiable(player,cell) || !player.canPlayerEdit(cell,EnumFacing.UP,stack))throw new IllegalArgumentException("Track would enter protected or unloaded space");
+                if(!blocks.containsKey(cell) && !world.getBlockState(cell).getBlock().isReplaceable(world,cell))throw new IllegalArgumentException("Track path is obstructed");
+            }
+            if(CurveTrackEntity.at(world,curve.a)!=null || CurveTrackEntity.at(world,curve.b)!=null)throw new IllegalArgumentException("This endpoint already has a connection");
+        }
+        int cost=blockCost+(curve==null?0:(curve.segments()+1)/2),available=0;
+        for(ItemStack item:player.inventory.mainInventory)if(item.getItem()==stack.getItem())available+=item.getCount();
+        if(!player.capabilities.isCreativeMode && available<cost)throw new IllegalArgumentException("Requires "+cost+" tracks");
+        return new Checked(placement,cost);
+    }
     @Override public ActionResult<ItemStack> onItemRightClick(World world,EntityPlayer player,EnumHand hand){
         ItemStack stack=player.getHeldItem(hand);if(player.isSneaking() && hasEffect(stack)){if(!world.isRemote)stack.getTagCompound().removeTag("ConnectingFrom");return new ActionResult<>(EnumActionResult.SUCCESS,stack);}return super.onItemRightClick(world,player,hand);
     }
@@ -62,24 +85,7 @@ public final class TrackItem extends ItemBlock {
         if(world.isRemote)return EnumActionResult.SUCCESS;
         try{
             if(stack.getTagCompound().getCompoundTag("ConnectingFrom").getInteger("Dimension")!=world.provider.getDimension())throw new IllegalArgumentException("Choose endpoints in the same dimension");
-            Placement placement=plan(world,stack,target,player);TrackCurve curve=placement.plan.curve();
-            var blocks=placement.blocks();int blockCost=0;
-            for(var entry:blocks.entrySet()){
-                BlockPos p=entry.getKey();if(!world.isBlockLoaded(p) || !world.isBlockModifiable(player,p) || !player.canPlayerEdit(p,face,stack))throw new IllegalArgumentException("Track would enter protected or unloaded space");
-                var existing=world.getBlockState(p);if(existing.equals(entry.getValue()))continue;
-                if(!existing.getBlock().isReplaceable(world,p))throw new IllegalArgumentException("Track path is obstructed");blockCost++;
-            }
-            if(curve!=null){
-                for(int i=0;i<=curve.segments();i++){
-                    TrackCurve.V p=curve.point(curve.renderT(i));BlockPos cell=new BlockPos(p.x(),p.y()+1e-5,p.z());
-                    if(!world.isBlockLoaded(cell) || !world.isBlockModifiable(player,cell) || !player.canPlayerEdit(cell,face,stack))throw new IllegalArgumentException("Track would enter protected or unloaded space");
-                    if(!blocks.containsKey(cell) && !world.getBlockState(cell).getBlock().isReplaceable(world,cell))throw new IllegalArgumentException("Track path is obstructed");
-                }
-                if(CurveTrackEntity.at(world,curve.a)!=null || CurveTrackEntity.at(world,curve.b)!=null)throw new IllegalArgumentException("This endpoint already has a connection");
-            }
-            int cost=blockCost+(curve==null?0:(curve.segments()+1)/2),available=0;
-            for(ItemStack item:player.inventory.mainInventory)if(item.getItem()==this)available+=item.getCount();
-            if(!player.capabilities.isCreativeMode && available<cost)throw new IllegalArgumentException("Requires "+cost+" tracks");
+            Checked checked=check(world,stack,target,player);Placement placement=checked.placement();TrackCurve curve=placement.plan.curve();var blocks=placement.blocks();int cost=checked.cost();
             var previous=new java.util.LinkedHashMap<BlockPos,IBlockState>();
             for(var entry:blocks.entrySet()){
                 if(world.getBlockState(entry.getKey()).equals(entry.getValue()))continue;
@@ -87,7 +93,7 @@ public final class TrackItem extends ItemBlock {
                 if(!world.setBlockState(entry.getKey(),entry.getValue(),3)){for(var old:previous.entrySet())world.setBlockState(old.getKey(),old.getValue(),3);return EnumActionResult.FAIL;}
             }
             if(curve!=null){CurveTrackEntity connection=new CurveTrackEntity(world);connection.configure(placement.anchor(true),placement.anchor(false),curve,!player.capabilities.isCreativeMode);CurveGraphData.get(world).add(world,connection);}
-            if(!player.capabilities.isCreativeMode){int remaining=cost;for(ItemStack item:player.inventory.mainInventory)if(item.getItem()==this){int take=Math.min(remaining,item.getCount());item.shrink(take);remaining-=take;if(remaining==0)break;}}
+            if(!player.capabilities.isCreativeMode){int remaining=cost;for(ItemStack item:player.inventory.mainInventory)if(item.getItem()==stack.getItem()){int take=Math.min(remaining,item.getCount());item.shrink(take);remaining-=take;if(remaining==0)break;}}
             if(stack.hasTagCompound())stack.getTagCompound().removeTag("ConnectingFrom");
             world.playSound(null,target,net.minecraft.init.SoundEvents.BLOCK_METAL_PLACE,SoundCategory.BLOCKS,.8f,1);return EnumActionResult.SUCCESS;
         }catch(IllegalArgumentException invalid){player.sendStatusMessage(new TextComponentString(invalid.getMessage()),true);return EnumActionResult.FAIL;}

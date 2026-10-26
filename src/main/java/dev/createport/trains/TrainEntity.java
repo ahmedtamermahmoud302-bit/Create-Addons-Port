@@ -24,6 +24,7 @@ public final class TrainEntity extends Entity {
     private static final DataParameter<Float> FRONT_YAW=EntityDataManager.createKey(TrainEntity.class,DataSerializers.FLOAT);
     private static final DataParameter<Float> REAR_YAW=EntityDataManager.createKey(TrainEntity.class,DataSerializers.FLOAT);
     private NBTTagCompound stationData=new NBTTagCompound();
+    private static final DataParameter<Integer> SEAT_INDEX=EntityDataManager.createKey(TrainEntity.class,DataSerializers.VARINT);
     private static final DataParameter<Integer> CONTROL_INDEX=EntityDataManager.createKey(TrainEntity.class,DataSerializers.VARINT);
     private static final DataParameter<Boolean> WORLD_BUILT=EntityDataManager.createKey(TrainEntity.class,DataSerializers.BOOLEAN);
     private Cursor cursor;
@@ -35,7 +36,7 @@ public final class TrainEntity extends Entity {
     private float targetYaw,targetPitch;
     private int interpolation;
     public TrainEntity(World world) { super(world);setSize(1.8f,1.7f);noClip=false; }
-    @Override protected void entityInit() { dataManager.register(CONTROL_INDEX,-1);dataManager.register(FRONT_YAW,0f);dataManager.register(REAR_YAW,0f);dataManager.register(SPEED,0f);dataManager.register(WHEELS,0f);dataManager.register(STRUCTURE,new NBTTagCompound());dataManager.register(WORLD_BUILT,false); }
+    @Override protected void entityInit() { dataManager.register(SEAT_INDEX,-1);dataManager.register(CONTROL_INDEX,-1);dataManager.register(FRONT_YAW,0f);dataManager.register(REAR_YAW,0f);dataManager.register(SPEED,0f);dataManager.register(WHEELS,0f);dataManager.register(STRUCTURE,new NBTTagCompound());dataManager.register(WORLD_BUILT,false); }
     @Override public void onAddedToWorld() {
         super.onAddedToWorld();
         if (!world.isRemote && ticket==null) {
@@ -84,8 +85,10 @@ public final class TrainEntity extends Entity {
     public double bodyOffset(){return worldBuilt()?1.15:1.6;}
     private TrainStructure.Part controller(){
         var parts=structure();int controlIndex=dataManager.get(CONTROL_INDEX);if(controlIndex>=0 && controlIndex<parts.size() && parts.get(controlIndex).state().getBlock()==Create.TRAIN_CONTROLS)return parts.get(controlIndex);
+        if(dataManager.get(SEAT_INDEX)>=0)return null;
         for(var p:parts)if(p.state().getBlock()==Create.TRAIN_CONTROLS)return p;return null;
     }
+    public boolean controlsActive(){return !worldBuilt()||dataManager.get(CONTROL_INDEX)>=0;}
     public float speed() { return dataManager.get(SPEED); }
     public float wheels() { return dataManager.get(WHEELS); }
     private RailPath.Shape track(Cell cell) {
@@ -220,13 +223,18 @@ public final class TrainEntity extends Entity {
         if(worldHit!=null)nearest=Math.min(nearest,player.getPositionEyes(1).distanceTo(worldHit.hitVec));
         for(int i=0;i<parts.size();i++){
             var part=parts.get(i);double bottom=.85+part.y();if(part.state().getBlock()==Create.SMALL_BOGEY)bottom+=.4375;
-            var box=new AxisAlignedBB(part.x()-.5,bottom,part.z()-.5,part.x()+.5,1.85+part.y(),part.z()+.5);
+            var box=new AxisAlignedBB(part.x()-.5,bottom,part.z()-.5,part.x()+.5,(part.state().getBlock() instanceof SeatBlock?1.35:1.85)+part.y(),part.z()+.5);
             var intersect=box.calculateIntercept(from,to);double distance=box.contains(from)?0:intersect==null?Double.POSITIVE_INFINITY:from.distanceTo(intersect.hitVec);
             if(distance<nearest){nearest=distance;selected=i;}
         }
-        if(selected>=0 && parts.get(selected).state().getBlock()==Create.TRAIN_CONTROLS){
-            if(!world.isRemote && !player.isSpectator() && !player.isSneaking() && getPassengers().isEmpty()){
-                dataManager.set(CONTROL_INDEX,selected);player.startRiding(this);
+        if(selected>=0 && (parts.get(selected).state().getBlock()==Create.TRAIN_CONTROLS || parts.get(selected).state().getBlock() instanceof SeatBlock)){
+            if(!world.isRemote&&!player.isSpectator()&&!player.isSneaking()){
+                boolean seat=parts.get(selected).state().getBlock() instanceof SeatBlock;
+                if(!seat&&player.getRidingEntity()==this){dataManager.set(CONTROL_INDEX,selected);return EnumActionResult.SUCCESS;}
+                if(getPassengers().isEmpty()){
+                    dataManager.set(SEAT_INDEX,seat?selected:-1);dataManager.set(CONTROL_INDEX,seat?-1:selected);player.startRiding(this);
+                    if(seat)player.sendStatusMessage(new net.minecraft.util.text.TextComponentString("Use nearby Train Controls to start driving."),true);
+                }
             }return EnumActionResult.SUCCESS;
         }return EnumActionResult.PASS;
     }
@@ -235,12 +243,18 @@ public final class TrainEntity extends Entity {
         if(!world.isRemote && getPassengers().isEmpty())player.startRiding(this);return true;
     }
     @Override public void updatePassenger(Entity passenger){
-        if(!isPassenger(passenger))return;var control=controller();
+        if(!isPassenger(passenger))return;
+        int seat=dataManager.get(SEAT_INDEX);
+        if(seat>=0&&seat<structure().size()&&structure().get(seat).state().getBlock() instanceof SeatBlock){
+            var p=structure().get(seat);double a=Math.toRadians(rotationYaw);
+            passenger.setPosition(posX+Math.cos(a)*p.x()-Math.sin(a)*p.z(),posY+.85+p.y()+.5+passenger.getYOffset(),posZ+Math.sin(a)*p.x()+Math.cos(a)*p.z());return;
+        }
+        var control=controller();
         if(!worldBuilt() || control==null){super.updatePassenger(passenger);return;}
         var face=control.state().getValue(RailwayBlock.FACING);double x=control.x()+face.getXOffset()*.85,z=control.z()+face.getZOffset()*.85,a=Math.toRadians(rotationYaw);
         passenger.setPosition(posX+Math.cos(a)*x-Math.sin(a)*z,posY+.85+control.y()+passenger.getYOffset(),posZ+Math.sin(a)*x+Math.cos(a)*z);
     }
-    @Override public Entity getControllingPassenger() { return getPassengers().isEmpty() ? null:getPassengers().get(0); }
+    @Override public Entity getControllingPassenger() { return getPassengers().isEmpty() || worldBuilt()&&dataManager.get(SEAT_INDEX)>=0&&controller()==null ? null:getPassengers().get(0); }
     // Only the server moves this entity; vanilla vehicle prediction would overwrite its rail cursor.
     @Override public boolean canPassengerSteer() { return false; }
     @Override protected boolean canFitPassenger(Entity passenger) { return getPassengers().isEmpty(); }
@@ -256,6 +270,7 @@ public final class TrainEntity extends Entity {
             nbt.setDouble("Progress",cursor.progress());nbt.setInteger("Forward",cursor.forward());
         }
         if(curveId!=null){nbt.setUniqueId("CurveId",curveId);nbt.setDouble("CurveDistance",curveDistance);nbt.setInteger("CurveForward",curveForward);}
+        nbt.setInteger("SeatIndex",dataManager.get(SEAT_INDEX));nbt.setInteger("ControlIndex",dataManager.get(CONTROL_INDEX));
         nbt.setTag("StationAssembly",stationData.copy());nbt.setBoolean("WorldBuilt",worldBuilt());
         nbt.setTag("Structure",dataManager.get(STRUCTURE).copy());
         nbt.setDouble("TrainSpeed",speed);nbt.setDouble("Cruise",cruise);nbt.setFloat("WheelAngle",wheels());
@@ -264,6 +279,7 @@ public final class TrainEntity extends Entity {
         if (nbt.hasKey("TrackX")) cursor=new Cursor(new Cell(nbt.getInteger("TrackX"),nbt.getInteger("TrackY"),nbt.getInteger("TrackZ")),
                 finiteClamp(nbt.getDouble("Progress"),0,1),nbt.getInteger("Forward")==-1 ? -1:1);
         curveId=nbt.hasUniqueId("CurveId")?nbt.getUniqueId("CurveId"):null;curveDistance=Math.max(0,nbt.getDouble("CurveDistance"));curveForward=nbt.getInteger("CurveForward")==-1?-1:1;
+        dataManager.set(SEAT_INDEX,nbt.hasKey("SeatIndex")?nbt.getInteger("SeatIndex"):-1);dataManager.set(CONTROL_INDEX,nbt.hasKey("ControlIndex")?nbt.getInteger("ControlIndex"):-1);
         stationData=nbt.getCompoundTag("StationAssembly").copy();dataManager.set(WORLD_BUILT,nbt.getBoolean("WorldBuilt"));
         setStructure(TrainStructure.read(nbt.getCompoundTag("Structure")));
         speed=finiteClamp(nbt.getDouble("TrainSpeed"),-TrainMotion.MAX_SPEED,TrainMotion.MAX_SPEED);

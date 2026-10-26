@@ -12,7 +12,13 @@ For a flat connection, the selected axes are oriented toward each other. The too
 
 For turns, the source's minimum intersection distances are 7 for 90-degree turns and 3.25 for other allowed turns, with additional clearance for elevation. Extra distance becomes straight extensions on both ends, rounded down to block counts. Sprint keeps the largest available curve. Level S bends need a forward distance of at least twice their lateral offset (or 3 when the offset is at most 1); excess distance is split between the two straight extensions. Collinear level connections fill ordinary track rather than storing a curve.
 
-Preview and placement share `TrackPlacement.Plan`. Placement validates permissions, loaded chunks, obstructions and survival inventory before changing the world. Curve specifications are saved in per-dimension `create_tracks` data; both endpoint tiles synchronize them for rendering.
+Preview and placement share `TrackPlacement.Plan` and `TrackItem.check`, including permissions, loaded chunks, obstructions and survival inventory before changing the world. Green/red rail outlines and checkerboard hints use this preflight. A validated client packet carries the held Sprint key, so maximizing a curve works while stationary. Curve specifications are saved in per-dimension `create_tracks` data; both endpoint tiles synchronize them for rendering.
+
+## Half-circle construction
+
+Create's flat planner rejects a single 180-degree connection. Make two quarter-turn connections with a perpendicular track at the midpoint. Hold Sprint while confirming each curve to avoid the default straight extensions shrinking it.
+
+The native test used east–west tracks at `(0,8,-48)` and `(0,8,-24)`, with a north–south midpoint at `(12,8,-36)`. Connect the first to the midpoint, then the midpoint to the far line, holding Sprint each time. The first curve joins `(1,8,-47.5)` to `(12.5,8,-36)`; the second joins `(12.5,8,-35)` to `(1,8,-23.5)`. The midpoint track supplies the one-block connector between the two. A real seated player drove a two-bogey carriage across both and reversed back.
 
 ## Cubic curves
 

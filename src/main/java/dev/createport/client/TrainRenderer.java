@@ -49,10 +49,14 @@ public final class TrainRenderer extends Render<TrainEntity> {
         else for(var part:train.structure())if(part.state().getBlock()==dev.createport.Create.SMALL_BOGEY){GlStateManager.pushMatrix();GlStateManager.translate(part.x(),part.y(),part.z());GlStateManager.rotate(-train.bogeyYaw(part.z()>0),0,1,0);drawBogey(wheelAngle);GlStateManager.popMatrix();}
         bindTexture(net.minecraft.client.renderer.texture.TextureMap.LOCATION_BLOCKS_TEXTURE);
         BlockRendererDispatcher blocks=Minecraft.getMinecraft().getBlockRendererDispatcher();
+        java.util.Map<net.minecraft.util.math.BlockPos,net.minecraft.block.state.IBlockState> carried=new java.util.HashMap<>();
+        for(var p:train.structure())carried.put(new net.minecraft.util.math.BlockPos(p.x(),p.y(),p.z()),p.state());
         for (TrainStructure.Part part:train.structure()) {
             GlStateManager.pushMatrix();GlStateManager.translate(part.x()-.5,train.bodyOffset()+part.y(),part.z()-.5);
-            var state=part.state();if(state.getBlock() instanceof ControlsBlock)state=state.withProperty(ControlsBlock.VIRTUAL,true);
-            blocks.getBlockModelRenderer().renderModelBrightnessColor(blocks.getModelForState(state),1,1,1,1);
+            var state=part.state();if(state.getBlock() instanceof TrainCasingBlock)state=TrainCasingBlock.withConnections(state,new net.minecraft.util.math.BlockPos(part.x(),part.y(),part.z()),p->carried.getOrDefault(p,Blocks.AIR.getDefaultState()));
+            if(state.getBlock() instanceof ControlsBlock)state=state.withProperty(ControlsBlock.VIRTUAL,true);
+            var model=blocks.getModelForState(state instanceof net.minecraftforge.common.property.IExtendedBlockState extended?extended.getClean():state);if(model instanceof CasingModel casing)model=casing.forState(state);
+            blocks.getBlockModelRenderer().renderModelBrightnessColor(model,1,1,1,1);
             GlStateManager.popMatrix();
         }
         GlStateManager.enableCull();GlStateManager.disableRescaleNormal();GlStateManager.popMatrix();

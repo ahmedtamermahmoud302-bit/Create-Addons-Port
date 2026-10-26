@@ -26,6 +26,7 @@ public final class TrainControls {
         if (event.getType()!=RenderGameOverlayEvent.ElementType.ALL) return;
         Minecraft mc=Minecraft.getMinecraft();
         if (mc.player==null || !(mc.player.getRidingEntity() instanceof TrainEntity train)) return;
+        if(!train.controlsActive())return;
         int y=event.getResolution().getScaledHeight()-65;
         String speed=String.format(java.util.Locale.ROOT,"Train  %.1f km/h",Math.abs(train.speed())*72);
         mc.fontRenderer.drawStringWithShadow(speed,10,y,0xffdd88);

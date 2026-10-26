@@ -15,10 +15,10 @@ public final class SpeedSettingsScreen extends GuiScreen {
     private static final ResourceLocation TEXTURE = new ResourceLocation("create", "textures/gui/value_settings.png");
     private final BlockPos pos;
     private final int initialSpeed;
-    private int left, top, labelWidth, barWidth;
+    private int left, top, labelWidth, barWidth,ticksOpen;
     public SpeedSettingsScreen(BlockPos pos, int speed) { this.pos = pos; this.initialSpeed = speed; }
     @Override public void initGui() {
-        labelWidth = Math.max(fontRenderer.getStringWidth("\u27f3"),fontRenderer.getStringWidth("\u27f2"));
+        labelWidth = Math.max(fontRenderer.getStringWidth("§l\u27f3"),fontRenderer.getStringWidth("§l\u27f2"));
         barWidth = 258 + 9 * 4;
         left = (width - labelWidth - 14 - barWidth - 10) / 2; top = (height - 22) / 2;
         int row = initialSpeed < 0 ? 0 : 1;
@@ -35,7 +35,7 @@ public final class SpeedSettingsScreen extends GuiScreen {
         int best = 0; float distance = Float.MAX_VALUE;
         for (int col=0; col<=256; col += isShiftKeyDown() ? 32 : 1) {
             float d = Math.abs(coordinate(col)-mouseX);
-            if (d < distance) { distance=d; best=col; }
+            if (d <= distance) { distance=d; best=col; }
         }
         return best;
     }
@@ -53,24 +53,27 @@ public final class SpeedSettingsScreen extends GuiScreen {
         }
     }
     @Override public void drawScreen(int mouseX,int mouseY,float partialTicks) {
-        drawGradientRect(0,0,width,height,0x50101010,0x50101010);
-        texture(left-11,top-17,80,9,1,1,labelWidth+barWidth+37,55);
-        drawCenteredString(fontRenderer,"Rotation Speed",width/2,top-14,0xdddddd);
-        drawCenteredString(fontRenderer,"Release to confirm",width/2,top+28,0xdddddd);
+        GlStateManager.enableBlend();
+        String title="Rotation Speed",tip=net.minecraft.client.resources.I18n.format("create.gui.value_settings.release_to_confirm",mc.gameSettings.keyBindUseItem.getDisplayName());
+        int windowWidth=labelWidth+barWidth+24,fattest=Math.max(fontRenderer.getStringWidth(title),fontRenderer.getStringWidth(tip));
+        int fatOffset=Math.max(0,fattest+10-(windowWidth+13))/2,fullWidth=Math.max(windowWidth+13,fattest+10);
+        float fade=Math.min(1,(ticksOpen+partialTicks)/4f);int faded=(int)(fullWidth*fade),start=(fullWidth-faded)/2-fatOffset;
+        texture(left-11+start,top-17,80,9,1,1,faded,55);texture(left-10+start,top-18,80,9,1,1,Math.max(0,faded-2),1);texture(left-10+start,top+38,80,9,1,1,Math.max(0,faded-2),1);
+        if(faded>fattest){int center=left-11-fatOffset+fullWidth/2;fontRenderer.drawString(title,center-fontRenderer.getStringWidth(title)/2,top-14,0xdddddd);fontRenderer.drawString(tip,center-fontRenderer.getStringWidth(tip)/2,top+28,0xdddddd);}
         frame(left+labelWidth+14,top-3,barWidth+8,27);frame(left-7,top-3,labelWidth+14,27);
         int barX=left+labelWidth+18;
         texture(barX-1,top,75,9,1,1,barWidth+2,21);
         for (int row=0;row<2;row++) {
             int y=top+row*11;
             texture(left-4,y,0,31,labelWidth+8,11,labelWidth+8,11);
-            fontRenderer.drawString(row==0 ? "\u27f3" : "\u27f2",left,y+1,0x442000);
+            fontRenderer.drawString(row==0 ? "§l\u27f3" : "§l\u27f2",left,y+1,0x442000);
             for (int d=0;d<barWidth;d+=248) {
                 int part=Math.min(248,barWidth-d);texture(barX+d,y+1,7,0,part,8,part,8);
             }
             for(int m=0;m<9;m++) texture(barX+m*36,y+1,0,0,7,8,7,8);
         }
-        int row=mouseY < top+11 ? 0 : 1, value=closest(mouseX);
-        String text=Math.max(1,value)+(row==0 ? " \u27f3" : " \u27f2");
+        int row=mouseY < top+10.5 ? 0 : 1, value=closest(mouseX);
+        String text=Math.max(1,value)+(row==0 ? "§l\u27f3" : "§l\u27f2");
         int cursorWidth=fontRenderer.getStringWidth(text)/2*2+3;
         int x=(int)coordinate(value)-cursorWidth/2,y=top+(int)((row+.5f)*11-.5f)-7;
         texture(x-3,y,0,9,3,14,3,14);texture(x,y,4,9,cursorWidth,14,cursorWidth,14);
@@ -78,10 +81,11 @@ public final class SpeedSettingsScreen extends GuiScreen {
     }
     private void confirm(int mouseX,int mouseY) {
         int value=Math.max(1,closest(mouseX));
-        Create.NETWORK.sendToServer(new SpeedPacket(pos,mouseY<top+11 ? -value : value));
+        Create.NETWORK.sendToServer(new SpeedPacket(pos,mouseY<top+10.5 ? -value : value));
         mc.displayGuiScreen(null);
     }
     @Override public void updateScreen() {
+        ticksOpen++;
         int key=mc.gameSettings.keyBindUseItem.getKeyCode();
         boolean down=key<0 ? Mouse.isButtonDown(key+100) : key>0 && Keyboard.isKeyDown(key);
         if (!down) confirm(Mouse.getX()*width/mc.displayWidth,height-Mouse.getY()*height/mc.displayHeight-1);

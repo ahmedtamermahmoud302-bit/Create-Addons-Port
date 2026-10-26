@@ -13,6 +13,7 @@ public final class TrainCasingItem extends ItemBlock {
         if(world.isRemote)return EnumActionResult.SUCCESS;
         var station=TrainStationTile.assemblyFor(world,pos);if(station==null){player.sendStatusMessage(new TextComponentString("Enter assembly mode at a nearby Train Station first."),true);return EnumActionResult.FAIL;}
         var shape=TrainTrackBlock.pathShape(world.getBlockState(pos));if(shape!=RailPath.Shape.EAST_WEST && shape!=RailPath.Shape.NORTH_SOUTH)return EnumActionResult.FAIL;
+        station.refresh();if(!station.validBogeyOffset(station.offset(pos)))return EnumActionResult.FAIL;
         BlockPos top=pos.up();if(!world.isAirBlock(top) || !world.isBlockModifiable(player,top) || !player.canPlayerEdit(top,face,player.getHeldItem(hand)))return EnumActionResult.FAIL;
         for(int i=-2;i<=2;i++)if(world.getBlockState(top.add(shape==RailPath.Shape.EAST_WEST?i:0,0,shape==RailPath.Shape.NORTH_SOUTH?i:0)).getBlock()==Create.SMALL_BOGEY)return EnumActionResult.FAIL;
         var facing=shape==RailPath.Shape.EAST_WEST?EnumFacing.EAST:EnumFacing.SOUTH;

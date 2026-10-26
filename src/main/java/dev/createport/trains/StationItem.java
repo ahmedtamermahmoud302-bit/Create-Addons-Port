@@ -16,7 +16,7 @@ public final class StationItem extends ItemBlock {
         if(player.isSneaking() && hasEffect(stack)){if(!world.isRemote)stack.getTagCompound().removeTag("TrackTarget");return EnumActionResult.SUCCESS;}
         if(world.getBlockState(pos).getBlock() instanceof TrainTrackBlock){
             var shape=TrainTrackBlock.pathShape(world.getBlockState(pos));if(shape!=RailPath.Shape.NORTH_SOUTH && shape!=RailPath.Shape.EAST_WEST){if(!world.isRemote)player.sendStatusMessage(new TextComponentString("Choose straight track for the assembly station."),true);return EnumActionResult.FAIL;}
-            if(!world.isRemote){var tag=stack.getTagCompound();if(tag==null){tag=new NBTTagCompound();stack.setTagCompound(tag);}tag.setLong("TrackTarget",pos.toLong());tag.setInteger("Dimension",world.provider.getDimension());player.sendStatusMessage(new TextComponentString("Track selected. Place the station beside it."),true);}return EnumActionResult.SUCCESS;
+            if(!world.isRemote){var tag=stack.getTagCompound();if(tag==null){tag=new NBTTagCompound();stack.setTagCompound(tag);}tag.setLong("TrackTarget",pos.toLong());tag.setInteger("Dimension",world.provider.getDimension());var axis=TrackItem.axis(world.getBlockState(pos));if(axis.dot(new TrackCurve.V(player.getLookVec().x,player.getLookVec().y,player.getLookVec().z))>0)axis=axis.scale(-1);tag.setInteger("Direction",EnumFacing.getFacingFromVector((float)axis.x(),0,(float)axis.z()).getIndex());player.sendStatusMessage(new TextComponentString("Track selected. Place the station beside it."),true);}return EnumActionResult.SUCCESS;
         }
         if(!hasEffect(stack)){if(!world.isRemote)player.sendStatusMessage(new TextComponentString("First use the Train Station item on a straight track."),true);return EnumActionResult.FAIL;}
         return super.onItemUse(player,world,pos,hand,face,x,y,z);
@@ -25,7 +25,7 @@ public final class StationItem extends ItemBlock {
         if(!hasEffect(stack) || stack.getTagCompound().getInteger("Dimension")!=world.provider.getDimension())return false;
         BlockPos target=BlockPos.fromLong(stack.getTagCompound().getLong("TrackTarget"));if(target.distanceSq(pos)>16*16 || !world.isBlockLoaded(target))return false;
         if(!super.placeBlockAt(stack,player,world,pos,face,x,y,z,state))return false;
-        if(world.getTileEntity(pos) instanceof TrainStationTile station)station.configure(target);
+        if(world.getTileEntity(pos) instanceof TrainStationTile station)station.configure(target,EnumFacing.byIndex(stack.getTagCompound().getInteger("Direction")));
         stack.getTagCompound().removeTag("TrackTarget");return true;
     }
 }

@@ -24,4 +24,12 @@ class TrackPlacementTest {
         assertThrows(IllegalArgumentException.class,()->TrackPlacement.connect(new V(0,0,0),new V(6,0,6),new V(1,0,0),new V(0,0,-1),false));
         assertThrows(IllegalArgumentException.class,()->TrackPlacement.connect(new V(0,0,0),new V(14,1,4),new V(1,0,0),new V(-1,0,0),false));
     }
+    @Test void twoMaximisedQuarterTurnsMakeAConnectedHalfTurn(){
+        var first=TrackPlacement.connect(new V(.5,0,.5),new V(12.5,0,12.5),new V(1,0,0),new V(0,0,-1),true);
+        var second=TrackPlacement.connect(new V(12.5,0,12.5),new V(.5,0,24.5),new V(0,0,1),new V(1,0,0),true);
+        assertEquals(0,first.extendA());assertEquals(0,first.extendB());assertEquals(0,second.extendA());assertEquals(0,second.extendB());
+        assertEquals(0,first.curve().tangent(1).sub(second.curve().tangent(0)).length(),1e-9);
+        assertEquals(1,first.curve().b.sub(second.curve().a).length(),1e-9);
+        assertEquals(0,first.curve().tangent(0).add(second.curve().tangent(1)).length(),1e-9);
+    }
 }

@@ -30,14 +30,14 @@ public final class TrainPicking {
             double d=eye.distanceTo(mc.objectMouseOver.hitVec);if(d<distance){best=mc.objectMouseOver;distance=d;}
         }
         for(var train:mc.world.getEntitiesWithinAABB(TrainEntity.class,new AxisAlignedBB(eye,end).grow(32))){
-            if(!train.worldBuilt() || train.isDead || viewer.getRidingEntity()==train)continue;
+            if(!train.worldBuilt() || train.isDead)continue;
             double angle=Math.toRadians(train.rotationYaw),cos=Math.cos(angle),sin=Math.sin(angle);
             Vec3d delta=eye.subtract(train.posX,train.posY,train.posZ),deltaEnd=end.subtract(train.posX,train.posY,train.posZ);
             Vec3d from=new Vec3d(cos*delta.x+sin*delta.z,delta.y,-sin*delta.x+cos*delta.z);
             Vec3d to=new Vec3d(cos*deltaEnd.x+sin*deltaEnd.z,deltaEnd.y,-sin*deltaEnd.x+cos*deltaEnd.z);
             for(var part:train.structure()){
                 double bottom=.85+part.y();if(part.state().getBlock()==Create.SMALL_BOGEY)bottom+=.4375;
-                var box=new AxisAlignedBB(part.x()-.5,bottom,part.z()-.5,part.x()+.5,1.85+part.y(),part.z()+.5);
+                var box=new AxisAlignedBB(part.x()-.5,bottom,part.z()-.5,part.x()+.5,(part.state().getBlock() instanceof dev.createport.trains.SeatBlock?1.35:1.85)+part.y(),part.z()+.5);
                 var hit=box.calculateIntercept(from,to);if(hit==null)continue;
                 double d=from.distanceTo(hit.hitVec);if(d>=distance)continue;
                 Vec3d p=hit.hitVec;best=new RayTraceResult(train,new Vec3d(train.posX+cos*p.x-sin*p.z,train.posY+p.y,train.posZ+sin*p.x+cos*p.z));distance=d;

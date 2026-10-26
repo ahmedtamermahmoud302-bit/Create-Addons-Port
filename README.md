@@ -1,8 +1,10 @@
 # Create — Cleanroom 1.12.2 port
 
-Work in progress. One `create` mod/artifact is the packaging target, with add-on features grouped internally under their original names. This checkout implements an initial kinetic foundation, Wrench and Engineer's Goggles, Bezier track placement, and world-built trains assembled/disassembled at a Train Station. It is not a complete or exact port of Create or its add-ons. See [train controls and limitations](docs/TRAINS.md).
+Work in progress. One `create` mod/artifact is the packaging target, with add-on features grouped internally under their original names. This checkout implements axial kinetics, Wrench and Engineer's Goggles, Bezier track placement, Super Glue volume selection, and seated world-built trains assembled/disassembled at a Train Station. It is not a complete or exact port of Create or its add-ons. See [train controls and limitations](docs/TRAINS.md).
 
-Latest build: [create-0.3.0-alpha.jar](create-0.3.0-alpha.jar). See [0.3.0 validation](docs/VALIDATION-0.3.md). Replace the older Create port JAR in `mods`; keep only one version installed.
+Latest build: [create-0.4.0-alpha.jar](create-0.4.0-alpha.jar). See [0.4.0 validation and screenshots](docs/VALIDATION-0.4.md). Replace the older Create port JAR in `mods`; keep only one version installed.
+
+0.4.0 adds all 16 seat colors, connected Train Casing textures on world blocks and moving carriages, original station panels/buttons/flags and track markers, glue selection/removal outlines, red/green track placement hints, and the motor's in-world speed control. RPM statistics require worn Goggles. The rotating motor shaft explicitly restores its atlas and white render color after tool overlays. The prototype Train Carriage inventory item is removed; old stacks migrate to Train Casing. Half-circle track construction uses two connected quarter-turns, with Sprint held to maximize each curve.
 
 Reference: Create **6.0.8 for Minecraft 1.20.1**, upstream tag `mc1.20.1-6.0.8` / commit `1a1a9a2819b4f89f78caec41b55ed8cb222fa24b`. See [parity tracking](docs/PARITY.md) and the [38 uploaded reference artifacts](docs/REFERENCES.md).
 
@@ -19,7 +21,7 @@ gradle --no-daemon build
 
 The bootstrap verifies pinned distribution checksums, installs tools outside the checkout, configures the supplied proxy, and retains TLS validation with the platform CA. It does not install any uploaded reference JAR onto the game classpath. It requires Python 3.12+, curl, and access to the declared dependency hosts.
 
-To test the independent kinetic math without resolving the Minecraft toolchain:
+To test the independent kinetic, railway, glue and connected-texture algorithms without resolving the Minecraft toolchain:
 
 ```bash
 bash scripts/test-core.sh
@@ -46,11 +48,11 @@ python scripts/smoke-server.py --stop
 
 ## Trains and Super Glue
 
-Use Railway Track, Train Station, Train Casing, Train Controls and Super Glue from Creative inventory. [The train guide](docs/TRAINS.md) explains how to build, assemble, drive and disassemble a carriage. [Track maths](docs/TRACK-MATH.md) explains straight extensions and Bezier turns. [Equipment](docs/EQUIPMENT.md) covers the Wrench and Engineer's Goggles.
+Use Railway Track, Train Station, Train Casing, Train Controls, Seats and Super Glue from Creative inventory. [The train guide](docs/TRAINS.md) explains how to build, assemble, sit, drive and disassemble a carriage. [Track maths](docs/TRACK-MATH.md) explains straight extensions, Bezier turns and half-circles. [Equipment](docs/EQUIPMENT.md) covers the Wrench, Engineer's Goggles and motor controls.
 
 ## Initial kinetic content
 
-`create:creative_motor` and `create:shaft` are registered. The motor has six facing directions and a single output face; shafts connect axially. Default motor speed is 16 RPM; configurable range is -256 to +256. Hold use on a motor's side to open the two-row speed board; release use to confirm. Shift snaps selection to 32-RPM milestones. Negative values use the clockwise row; positive values use the counterclockwise row. The settings board enforces a minimum magnitude of 1, matching the reference board; the internal motor setting also supports 0.
+`create:creative_motor` and `create:shaft` are registered. The motor has six facing directions and a single output face; shafts connect axially. Default motor speed is 16 RPM; configurable range is -256 to +256. Look at the value on an active motor side and hold use to open the two-row speed board; release use to confirm. Shift snaps selection to 32-RPM milestones. Negative values use the clockwise row; positive values use the counterclockwise row. The settings board enforces a minimum magnitude of 1, matching the reference board; the internal motor setting also supports 0. The in-world value control remains usable without Goggles; kinetic RPM/stress statistics appear only while Goggles are worn.
 
 Speed packets are applied by the server. Tile settings and network state are saved and synchronized. The independent solver includes speed ratios, stress accounting, overload, overspeed, and conflicting-source detection. Only axial 1:1 connections are currently wired into the Minecraft blocks; ratio and stress-consumer tests do not mean cogwheels or processing machines exist.
 
